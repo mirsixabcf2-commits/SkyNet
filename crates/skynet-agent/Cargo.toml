@@ -1,0 +1,25 @@
+[package]
+name = "skynet-agent"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+metal = ["skynet-cell/metal"]
+cuda = ["skynet-cell/cuda"]
+
+[dependencies]
+bincode.workspace = true
+blake3.workspace = true
+candle-core.workspace = true
+ed25519-dalek.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+serde.workspace = true
+skynet-cell.workspace = true
+skynet-dna.workspace = true
+skynet-ledger.workspace = true
+skynet-wire.workspace = true
+thiserror.workspace = true
+tokio.workspace = true

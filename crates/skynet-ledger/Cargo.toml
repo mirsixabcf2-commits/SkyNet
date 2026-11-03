@@ -1,0 +1,15 @@
+[package]
+name = "skynet-ledger"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+blake3.workspace = true
+ed25519-dalek.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+rand.workspace = true
+rand_chacha.workspace = true

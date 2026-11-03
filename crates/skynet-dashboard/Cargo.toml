@@ -1,0 +1,23 @@
+[package]
+name = "skynet-dashboard"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+metal = ["skynet-agent/metal"]
+cuda = ["skynet-agent/cuda"]
+
+[dependencies]
+ed25519-dalek.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+skynet-agent.workspace = true
+skynet-cell.workspace = true
+skynet-dna.workspace = true
+skynet-ledger.workspace = true
+skynet-wire.workspace = true
+tokio.workspace = true

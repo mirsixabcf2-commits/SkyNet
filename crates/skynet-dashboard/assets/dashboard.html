@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkyNet Bio-Cellular AI Blockchain — Real-Time Dashboard</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6 space-y-5">
+  <!-- Header & Connection Status -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-xl font-bold tracking-tight">SKYNET // Bio-Cellular AI &amp; SKN Telemetry</h1>
+        <span id="engineBadge" class="px-2.5 py-1 rounded-full text-xs font-medium border border-[var(--border)] bg-[var(--secondary)] text-[var(--foreground)]">
+          Đang kết nối nhân Rust...
+        </span>
+      </div>
+      <p class="text-xs text-[var(--muted-foreground)] mt-1">
+        1 Node = 1 Cơ thể AI Đa bào (Candle) • Đồng thuận Snowball qua UDP chấp nhận mất gói • Định tuyến IP Logarit O(log N) • Tổng cung bất biến 21 Nghìn tỉ SKN
+      </p>
+    </div>
+    <div class="flex items-center gap-3 text-xs">
+      <div class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)]">
+        <span class="text-[var(--muted-foreground)]">Xung nhịp:</span>
+        <span id="hdrTick" class="font-mono font-semibold ml-1">0</span>
+      </div>
+      <div class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)]">
+        <span class="text-[var(--muted-foreground)]">Bảo toàn 21T SKN:</span>
+        <span id="hdrConservation" class="font-mono font-semibold text-emerald-500 ml-1">0 nanoSKN sai số</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top KPI Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="text-xs text-[var(--muted-foreground)] font-medium">Tổng cung Cố định &amp; Quỹ Halving</div>
+      <div class="text-lg font-bold font-mono mt-1">21,000,000,000,000 SKN</div>
+      <div class="text-xs text-[var(--muted-foreground)] mt-1">
+        Năm 1 (50%): <span id="kpiHalvingY1" class="font-mono text-[var(--foreground)]">10.50T SKN</span> • Hồ phí: <span id="kpiNutrient" class="font-mono text-emerald-500">0</span> nanoSKN
+      </div>
+    </div>
+
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="text-xs text-[var(--muted-foreground)] font-medium">Mạng Xung UDP (ACK-less)</div>
+      <div class="text-lg font-bold font-mono mt-1">
+        <span id="kpiUdpSent">0</span> <span class="text-xs font-normal text-[var(--muted-foreground)]">tới đích</span> /
+        <span id="kpiUdpDropped" class="text-rose-500">0</span> <span class="text-xs font-normal text-[var(--muted-foreground)]">rớt</span>
+      </div>
+      <div class="text-xs text-[var(--muted-foreground)] mt-1">
+        Tỷ lệ mất gói thực tế: <span id="kpiLossActual" class="font-mono font-semibold text-amber-500">25.0%</span> (Không gửi lại)
+      </div>
+    </div>
+
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="text-xs text-[var(--muted-foreground)] font-medium">Tối ưu Bảng IP O(log₂N) (Kademlia + Hebbian)</div>
+      <div class="text-lg font-bold font-mono mt-1">
+        <span id="kpiPeerRam" class="text-emerald-500">0.5 KB</span>
+        <span class="text-xs font-normal text-[var(--muted-foreground)]">/ node (vs ngây thơ: <span id="kpiNaiveRam" class="line-through">0.5 KB</span>)</span>
+      </div>
+      <div class="text-xs text-[var(--muted-foreground)] mt-1">
+        Đã thấy <span id="kpiObservedIps" class="font-mono font-semibold text-[var(--foreground)]">8</span> IP • Chỉ giữ TB <span id="kpiStoredIps" class="font-mono font-semibold text-[var(--foreground)]">7</span> IP/node
+      </div>
+    </div>
+
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="text-xs text-[var(--muted-foreground)] font-medium">Xác thực Chuỗi Siêu nhẹ (Utreexo + Voucher)</div>
+      <div class="text-lg font-bold font-mono mt-1">
+        <span id="kpiUtreexoBytes" class="text-sky-500">41 Bytes</span> <span class="text-xs font-normal text-[var(--muted-foreground)]">RAM gốc Merkle</span>
+      </div>
+      <div class="text-xs text-[var(--muted-foreground)] mt-1">
+        Vi thanh toán Voucher AI: <span id="kpiVouchers" class="font-mono font-semibold text-[var(--foreground)]">0</span> nanoSKN
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Chaos & Protocol Controls -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3 flex-wrap">
+      <label class="text-xs font-medium flex items-center gap-2">
+        <span>Độ nhiễu rớt gói UDP:</span>
+        <input id="lossSlider" type="range" min="0" max="55" value="25" class="accent-sky-500 cursor-pointer" />
+        <span id="lossLabel" class="font-mono font-semibold w-10">25%</span>
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button onclick="sendControl('flood_ips')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition">
+        +5.000 IP mới (Test nén IP O(log N))
+      </button>
+      <button onclick="sendControl('double_spend')" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] bg-[var(--secondary)] text-[var(--foreground)] hover:opacity-80 transition">
+        Bắn Giao dịch Double-Spend (Snowball)
+      </button>
+      <button onclick="sendControl('cluster_mitosis')" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] bg-[var(--secondary)] text-[var(--foreground)] hover:opacity-80 transition">
+        Phân tách Cụm (Cluster Mitosis)
+      </button>
+      <button onclick="sendControl('reclaim_iot')" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] bg-[var(--secondary)] text-[var(--foreground)] hover:opacity-80 transition">
+        Chủ nhân Alice Thu hồi Vốn IoT
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Topology Canvas + Selected Agent Dissector -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <!-- Left 7 cols: Live UDP Topology & Cluster Shards -->
+    <div class="lg:col-span-7 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-col">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-sm font-semibold">Không gian Cụm AI Agent &amp; Xung Thần kinh UDP Thời gian thực</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Bấm vào bất kỳ AI Agent nào trên đồ thị để giải phẫu các mô tế bào bên trong</p>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span>Snowball</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>nanoSKN/Tx</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-violet-400 inline-block"></span>Fountain DNA</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>Gói UDP rớt</span>
+        </div>
+      </div>
+      <div class="relative w-full rounded-lg border border-[var(--border)] overflow-hidden bg-[var(--background)]">
+        <canvas id="netCanvas" width="760" height="420" class="w-full h-auto block cursor-pointer"></canvas>
+      </div>
+    </div>
+
+    <!-- Right 5 cols: Multicellular Organ Dissector -->
+    <div class="lg:col-span-5 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-col justify-between space-y-4">
+      <div>
+        <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+          <div>
+            <div class="text-xs text-[var(--muted-foreground)]">Giải phẫu Cơ thể AI Đa bào (Candle Engine)</div>
+            <h2 id="inspName" class="text-base font-bold mt-0.5">Titan-GPU-01</h2>
+          </div>
+          <div class="text-right text-xs">
+            <div id="inspTier" class="font-semibold text-sky-500">ColossalOrganism</div>
+            <div class="text-[var(--muted-foreground)]">Chủ sở hữu: <span id="inspOwner" class="font-medium text-[var(--foreground)]">Alice</span> • Cụm <span id="inspCluster" class="font-mono">0b0</span></div>
+          </div>
+        </div>
+
+        <!-- 5 Tissue Lineages Bars -->
+        <div class="mt-4 space-y-2.5">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-medium">Quần thể Tế bào Sống: <span id="inspTotalCells" class="font-mono font-bold">0</span> / <span id="inspMaxCells" class="font-mono">0</span></span>
+            <span class="text-[var(--muted-foreground)]">Thế hệ DNA Max: <span id="inspGen" class="font-mono font-semibold text-[var(--foreground)]">0</span></span>
+          </div>
+
+          <div class="space-y-2 text-xs">
+            <div>
+              <div class="flex justify-between mb-0.5"><span>Tế bào Gốc (Stem — Dự trữ biệt hóa)</span><span id="roleStem" class="font-mono">0</span></div>
+              <div class="w-full h-2 rounded bg-[var(--secondary)] overflow-hidden"><div id="barStem" class="h-full bg-amber-400 transition-all duration-300" style="width:10%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-0.5"><span>Tế bào Da &amp; Miễn dịch (Epidermal — Lọc UDP)</span><span id="roleSkin" class="font-mono">0</span></div>
+              <div class="w-full h-2 rounded bg-[var(--secondary)] overflow-hidden"><div id="barSkin" class="h-full bg-sky-400 transition-all duration-300" style="width:20%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-0.5"><span>Tế bào Máu (Vascular — Phân phối nanoSKN)</span><span id="roleBlood" class="font-mono">0</span></div>
+              <div class="w-full h-2 rounded bg-[var(--secondary)] overflow-hidden"><div id="barBlood" class="h-full bg-rose-400 transition-all duration-300" style="width:20%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-0.5"><span>Tế bào Nội tạng (Visceral — UTXO &amp; Nhịp tim)</span><span id="roleOrgan" class="font-mono">0</span></div>
+              <div class="w-full h-2 rounded bg-[var(--secondary)] overflow-hidden"><div id="barOrgan" class="h-full bg-emerald-400 transition-all duration-300" style="width:20%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-0.5"><span>Tế bào Thần kinh (Neural — Suy luận &amp; Nhận thức)</span><span id="roleBrain" class="font-mono">0</span></div>
+              <div class="w-full h-2 rounded bg-[var(--secondary)] overflow-hidden"><div id="barBrain" class="h-full bg-violet-400 transition-all duration-300" style="width:20%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Internal Economy & Routing Stats -->
+      <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-[var(--border)] text-xs">
+        <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          <div class="text-[var(--muted-foreground)]">Máu nội bào (BloodPool)</div>
+          <div id="inspBlood" class="font-mono font-semibold mt-0.5">0 SKN</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          <div class="text-[var(--muted-foreground)]">Phân bào / Đào thải</div>
+          <div class="font-mono font-semibold mt-0.5">+<span id="inspMitosis" class="text-emerald-500">0</span> / -<span id="inspApoptosis" class="text-rose-500">0</span></div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          <div class="text-[var(--muted-foreground)]">Bảng định tuyến Synaptic IP</div>
+          <div class="font-mono font-semibold mt-0.5"><span id="inspPeers">0</span> IPs (<span id="inspPeerBytes">0</span> B)</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          <div class="text-[var(--muted-foreground)]">Gen ngoại nhập / Phí thu</div>
+          <div class="font-mono font-semibold mt-0.5"><span id="inspPlasmids">0</span> DNA • <span id="inspVoucher">0</span> nSKN</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Row: Human Sovereign Wallets + Live Event Stream -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <div class="lg:col-span-6 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <h2 class="text-sm font-semibold mb-3">Ví Chủ quyền Con người (Soul–Body Custody Covenant)</h2>
+      <div id="humanWalletsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs"></div>
+    </div>
+
+    <div class="lg:col-span-6 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <h2 class="text-sm font-semibold mb-3">Nhật ký Sinh học &amp; Đồng thuận Sổ cái Thời gian thực</h2>
+      <div id="eventLog" class="space-y-1.5 max-h-40 overflow-y-auto font-mono text-xs text-[var(--muted-foreground)]"></div>
+    </div>
+  </div>
+
+  <script>
+    // Apply standalone browser theme variables ONLY if host environment did not inject them
+    (function ensureStandaloneBrowserTheme() {
+      const rootStyle = getComputedStyle(document.documentElement);
+      if (!rootStyle.getPropertyValue('--background').trim()) {
+        const s = document.documentElement.style;
+        s.setProperty('--background', '#0b101b');
+        s.setProperty('--card', '#131b2e');
+        s.setProperty('--secondary', '#1e293b');
+        s.setProperty('--border', '#26354d');
+        s.setProperty('--foreground', '#f1f5f9');
+        s.setProperty('--muted-foreground', '#94a3b8');
+        s.setProperty('--primary', '#0ea5e9');
+        s.setProperty('--primary-foreground', '#ffffff');
+      }
+    })();
+
+    const API_BASE = 'http://127.0.0.1:8787';
+    let liveRustConnected = false;
+    let selectedAgentIdx = 0;
+    let currentState = null;
+    let flyingPulses = [];
+
+    // Built-in faithful fallback simulator if viewed without the local daemon reachable
+    const fallbackSim = {
+      tick: 0,
+      udpLossRate: 0.25,
+      udpSent: 420,
+      udpDropped: 138,
+      observedIps: 16,
+      utreexoBytes: 41,
+      nutrientNano: 12,
+      clusterDepth: 1,
+      iotReclaimed: false,
+      events: [
+        '[GENESIS] Khởi tạo cố định 21,000,000,000,000.000000000 SKN (u128 nanoSKN)',
+        '[UTREEXO] Nén toàn bộ UTXO xuống 41 bytes gốc Merkle không trạng thái',
+        '[CUSTODY] Alice & Bob ủy quyền 8 AI Agents qua AgentBond (trần rủi ro 10 SKN)'
+      ],
+      agents: [
+        { id: 0, name: 'Titan-GPU-01', owner: 'Alice', tier: 'ColossalOrganism', prefix: '0b0', cells: 118, maxCells: 16384, roles: [2, 48, 22, 24, 22], mitosis: 134, apoptosis: 22, gen: 8, bloodSkn: 499999.99, voucherNano: 1850, plasmids: 3, peers: 14 },
+        { id: 1, name: 'Titan-GPU-02', owner: 'Bob', tier: 'ColossalOrganism', prefix: '0b1', cells: 132, maxCells: 16384, roles: [2, 54, 26, 23, 27], mitosis: 151, apoptosis: 25, gen: 9, bloodSkn: 500000.00, voucherNano: 3400, plasmids: 4, peers: 15 },
+        { id: 2, name: 'Cortex-GPU-03', owner: 'Alice', tier: 'ColossalOrganism', prefix: '0b0', cells: 96, maxCells: 16384, roles: [2, 35, 19, 20, 20], mitosis: 108, apoptosis: 18, gen: 7, bloodSkn: 300000.00, voucherNano: 950, plasmids: 2, peers: 14 },
+        { id: 3, name: 'Laptop-Node-04', owner: 'Bob', tier: 'StandardNode', prefix: '0b1', cells: 44, maxCells: 512, roles: [1, 16, 9, 9, 9], mitosis: 49, apoptosis: 11, gen: 5, bloodSkn: 150000.00, voucherNano: 400, plasmids: 2, peers: 11 },
+        { id: 4, name: 'Workstation-05', owner: 'Alice', tier: 'StandardNode', prefix: '0b0', cells: 52, maxCells: 512, roles: [1, 19, 11, 10, 11], mitosis: 58, apoptosis: 12, gen: 6, bloodSkn: 150000.00, voucherNano: 620, plasmids: 1, peers: 12 },
+        { id: 5, name: 'IoT-Edge-06', owner: 'Alice', tier: 'TinyPeripheral', prefix: '0b0', cells: 22, maxCells: 32, roles: [1, 7, 5, 4, 5], mitosis: 24, apoptosis: 8, gen: 4, bloodSkn: 25000.00, voucherNano: 0, plasmids: 3, peers: 7 },
+        { id: 6, name: 'Drone-Cam-07', owner: 'Bob', tier: 'TinyPeripheral', prefix: '0b1', cells: 24, maxCells: 32, roles: [1, 8, 5, 5, 5], mitosis: 27, apoptosis: 9, gen: 4, bloodSkn: 25000.00, voucherNano: 0, plasmids: 2, peers: 7 },
+        { id: 7, name: 'SmartMeter-08', owner: 'Bob', tier: 'TinyPeripheral', prefix: '0b1', cells: 19, maxCells: 32, roles: [1, 6, 4, 4, 4], mitosis: 21, apoptosis: 8, gen: 3, bloodSkn: 25000.00, voucherNano: 0, plasmids: 1, peers: 6 }
+      ],
+      step() {
+        this.tick++;
+        const impulses = [];
+        this.agents.forEach((a, idx) => {
+          if (a.bloodSkn > 0 && a.cells < a.maxCells && Math.random() < (a.tier === 'ColossalOrganism' ? 0.55 : 0.25)) {
+            const rIdx = 1 + Math.floor(Math.random() * 4);
+            a.roles[rIdx]++;
+            a.cells++;
+            a.mitosis++;
+            if (Math.random() < 0.2) a.gen++;
+          }
+          if (a.cells > 10 && Math.random() < 0.22) {
+            const rIdx = 1 + Math.floor(Math.random() * 4);
+            if (a.roles[rIdx] > 2) {
+              a.roles[rIdx]--;
+              a.cells--;
+              a.apoptosis++;
+            }
+          }
+          const dst = (idx + 1 + Math.floor(Math.random() * (this.agents.length - 1))) % this.agents.length;
+          const dropped = Math.random() < this.udpLossRate;
+          if (dropped) this.udpDropped++; else this.udpSent++;
+          const kinds = ['snowball', 'voucher', 'fountain'];
+          const kind = kinds[Math.floor(Math.random() * kinds.length)];
+          if (!dropped && kind === 'voucher') this.agents[dst].voucherNano += 50;
+          impulses.push({ from_idx: idx, to_idx: dst, kind, dropped });
+        });
+
+        const avgPeers = Math.round(this.agents.reduce((s, a) => s + a.peers, 0) / this.agents.length);
+        return {
+          tick: this.tick,
+          udp_loss_rate: this.udpLossRate,
+          supply: {
+            halving_y1_skn: '10,499,999,150,000 SKN',
+            nutrient_pool_nano: this.nutrientNano,
+            conservation_ok: true
+          },
+          efficiency: {
+            utreexo_ram_bytes: this.utreexoBytes,
+            total_observed_ips: this.observedIps,
+            avg_stored_ips_per_node: avgPeers,
+            avg_peer_table_ram_bytes: avgPeers * 72,
+            naive_ip_ram_bytes: this.observedIps * 72,
+            udp_sent: this.udpSent,
+            udp_dropped: this.udpDropped
+          },
+          humans: [
+            {
+              name: 'Alice (Human Cold Key)',
+              cold_vault_skn: this.iotReclaimed ? '125,000.000 SKN' : '100,000.000 SKN',
+              net_worth_skn: '1,075,000.000 SKN',
+              agents_owned: 4,
+              allowance_cap: '10 SKN / Agent'
+            },
+            {
+              name: 'Bob (Human Cold Key)',
+              cold_vault_skn: '100,000.000 SKN',
+              net_worth_skn: '800,000.000 SKN',
+              agents_owned: 4,
+              allowance_cap: '10 SKN / Agent'
+            }
+          ],
+          agents: this.agents.map(a => ({
+            id: a.id,
+            name: a.name,
+            owner: a.owner,
+            tier: a.tier,
+            cluster_prefix_bin: a.prefix,
+            total_cells: a.cells,
+            max_cells: a.maxCells,
+            roles: { stem: a.roles[0], epidermal: a.roles[1], vascular: a.roles[2], visceral: a.roles[3], neural: a.roles[4] },
+            mitosis: a.mitosis,
+            apoptosis: a.apoptosis,
+            max_gen: a.gen,
+            blood_skn: a.bloodSkn.toLocaleString('en-US', { maximumFractionDigits: 3 }) + ' SKN',
+            voucher_nano_earned: a.voucherNano,
+            plasmids_imported: a.plasmids,
+            stored_peers: a.peers,
+            peer_ram_bytes: a.peers * 72
+          })),
+          recent_impulses: impulses,
+          events: this.events
+        };
+      }
+    };
+
+    const slider = document.getElementById('lossSlider');
+    const lossLabel = document.getElementById('lossLabel');
+    slider.addEventListener('input', (e) => {
+      const pct = parseInt(e.target.value, 10);
+      lossLabel.textContent = pct + '%';
+      sendControl('loss', (pct / 100).toFixed(2));
+    });
+
+    async function sendControl(action, value = '') {
+      if (liveRustConnected) {
+        try {
+          await fetch(`${API_BASE}/api/control?action=${encodeURIComponent(action)}&value=${encodeURIComponent(value)}`, { method: 'POST' });
+          return;
+        } catch (_) {}
+      }
+      // Fallback interactive action
+      if (action === 'loss') {
+        fallbackSim.udpLossRate = parseFloat(value);
+        fallbackSim.events.unshift(`[CHAOS] Điều chỉnh tỷ lệ rớt gói UDP sang ${Math.round(fallbackSim.udpLossRate * 100)}%`);
+      } else if (action === 'flood_ips') {
+        fallbackSim.observedIps += 5000;
+        fallbackSim.agents.forEach(a => {
+          const cap = a.tier === 'TinyPeripheral' ? 42 : (a.tier === 'StandardNode' ? 88 : 136);
+          a.peers = Math.min(cap, a.peers + 18);
+        });
+        fallbackSim.events.unshift(`[ROUTING] Bơm +5.000 IP mới! Bảng Kademlia + Hebbian cắt tỉa giữ RAM chỉ ~5 KB/node`);
+      } else if (action === 'double_spend') {
+        fallbackSim.nutrientNano += 1;
+        fallbackSim.events.unshift(`[SNOWBALL] Phát hiện Double-Spend! 8/8 Agents đồng thuận chốt 1 nhánh qua Utreexo Witness (728B)`);
+      } else if (action === 'cluster_mitosis') {
+        fallbackSim.clusterDepth = Math.min(3, fallbackSim.clusterDepth + 1);
+        fallbackSim.agents.forEach((a, i) => {
+          a.prefix = '0b' + (i % (1 << fallbackSim.clusterDepth)).toString(2).padStart(fallbackSim.clusterDepth, '0');
+        });
+        fallbackSim.events.unshift(`[MITOSIS] Phân tách tiền tố cụm thành ${1 << fallbackSim.clusterDepth} phân vùng độc lập!`);
+      } else if (action === 'reclaim_iot' && !fallbackSim.iotReclaimed) {
+        fallbackSim.iotReclaimed = true;
+        fallbackSim.agents[5].bloodSkn = 0;
+        fallbackSim.agents[5].cells = 5;
+        fallbackSim.events.unshift(`[SOVEREIGN] Alice dùng Khóa Lạnh thu hồi khẩn cấp 25,000 SKN từ IoT-Edge-06 về Ví Lạnh!`);
+      }
+      fallbackSim.events = fallbackSim.events.slice(0, 18);
+    }
+
+    async function pollTelemetry() {
+      try {
+        const res = await fetch(`${API_BASE}/api/state`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          liveRustConnected = true;
+          const badge = document.getElementById('engineBadge');
+          badge.textContent = '● LIVE RUST CANDLE + UDP (127.0.0.1:8787)';
+          badge.className = 'px-2.5 py-1 rounded-full text-xs font-medium border border-emerald-500/40 bg-emerald-500/15 text-emerald-400';
+          applyState(data);
+          return;
+        }
+      } catch (_) {
+        liveRustConnected = false;
+        const badge = document.getElementById('engineBadge');
+        badge.textContent = '● CHẾ ĐỘ MÔ PHỎNG TƯƠNG TÁC TRỰC TIẾP';
+        badge.className = 'px-2.5 py-1 rounded-full text-xs font-medium border border-sky-500/40 bg-sky-500/15 text-sky-400';
+        applyState(fallbackSim.step());
+      }
+    }
+
+    function formatBytes(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+      return (b / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function applyState(st) {
+      currentState = st;
+      document.getElementById('hdrTick').textContent = st.tick;
+      document.getElementById('hdrConservation').textContent = st.supply.conservation_ok ? '0 nanoSKN sai số (HỢP LỆ)' : 'LỆCH!';
+
+      document.getElementById('kpiHalvingY1').textContent = st.supply.halving_y1_skn;
+      document.getElementById('kpiNutrient').textContent = st.supply.nutrient_pool_nano;
+
+      const sent = st.efficiency.udp_sent;
+      const dropped = st.efficiency.udp_dropped;
+      const lossPct = ((dropped * 100) / Math.max(1, sent + dropped)).toFixed(1);
+      document.getElementById('kpiUdpSent').textContent = sent.toLocaleString();
+      document.getElementById('kpiUdpDropped').textContent = dropped.toLocaleString();
+      document.getElementById('kpiLossActual').textContent = lossPct + '%';
+
+      document.getElementById('kpiPeerRam').textContent = formatBytes(st.efficiency.avg_peer_table_ram_bytes);
+      document.getElementById('kpiNaiveRam').textContent = formatBytes(st.efficiency.naive_ip_ram_bytes);
+      document.getElementById('kpiObservedIps').textContent = st.efficiency.total_observed_ips.toLocaleString();
+      document.getElementById('kpiStoredIps').textContent = st.efficiency.avg_stored_ips_per_node;
+
+      document.getElementById('kpiUtreexoBytes').textContent = st.efficiency.utreexo_ram_bytes + ' Bytes';
+      const totalVouchers = st.agents.reduce((s, a) => s + a.voucher_nano_earned, 0);
+      document.getElementById('kpiVouchers').textContent = totalVouchers.toLocaleString();
+
+      // Spawn animated flying pulses
+      (st.recent_impulses || []).forEach(imp => {
+        flyingPulses.push({
+          from: imp.from_idx,
+          to: imp.to_idx,
+          kind: imp.kind,
+          dropped: imp.dropped,
+          t: 0
+        });
+      });
+
+      // Update Inspector for selected Agent
+      const ag = st.agents[selectedAgentIdx] || st.agents[0];
+      if (ag) {
+        document.getElementById('inspName').textContent = ag.name;
+        document.getElementById('inspTier').textContent = ag.tier;
+        document.getElementById('inspOwner').textContent = ag.owner;
+        document.getElementById('inspCluster').textContent = ag.cluster_prefix_bin;
+        document.getElementById('inspTotalCells').textContent = ag.total_cells;
+        document.getElementById('inspMaxCells').textContent = ag.max_cells.toLocaleString();
+        document.getElementById('inspGen').textContent = ag.max_gen;
+
+        const tot = Math.max(1, ag.total_cells);
+        const setBar = (idTxt, idBar, val) => {
+          document.getElementById(idTxt).textContent = val;
+          document.getElementById(idBar).style.width = Math.max(4, Math.round((val * 100) / tot)) + '%';
+        };
+        setBar('roleStem', 'barStem', ag.roles.stem);
+        setBar('roleSkin', 'barSkin', ag.roles.epidermal);
+        setBar('roleBlood', 'barBlood', ag.roles.vascular);
+        setBar('roleOrgan', 'barOrgan', ag.roles.visceral);
+        setBar('roleBrain', 'barBrain', ag.roles.neural);
+
+        document.getElementById('inspBlood').textContent = ag.blood_skn;
+        document.getElementById('inspMitosis').textContent = ag.mitosis;
+        document.getElementById('inspApoptosis').textContent = ag.apoptosis;
+        document.getElementById('inspPeers').textContent = ag.stored_peers;
+        document.getElementById('inspPeerBytes').textContent = formatBytes(ag.peer_ram_bytes);
+        document.getElementById('inspPlasmids').textContent = ag.plasmids_imported;
+        document.getElementById('inspVoucher').textContent = ag.voucher_nano_earned;
+      }
+
+      // Render Human Wallets
+      const hw = document.getElementById('humanWalletsGrid');
+      hw.innerHTML = st.humans.map(h => `
+        <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--border)] space-y-1.5">
+          <div class="font-semibold text-amber-400 flex items-center justify-between">
+            <span>${h.name}</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--foreground)]">${h.agents_owned} Agents</span>
+          </div>
+          <div class="flex justify-between"><span class="text-[var(--muted-foreground)]">Ví lạnh (0% burn):</span><span class="font-mono font-semibold">${h.cold_vault_skn}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted-foreground)]">Tổng tài sản ròng:</span><span class="font-mono font-semibold text-emerald-400">${h.net_worth_skn}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted-foreground)]">Khóa trần rủi ro:</span><span class="font-mono">${h.allowance_cap}</span></div>
+        </div>
+      `).join('');
+
+      // Render Event Log
+      const logEl = document.getElementById('eventLog');
+      logEl.innerHTML = (st.events || []).map(ev => `<div class="py-0.5 border-b border-[var(--border)]/40">${ev}</div>`).join('');
+    }
+
+    // Canvas Topology & 60fps Synaptic Impulse Renderer
+    const canvas = document.getElementById('netCanvas');
+    const ctx = canvas.getContext('2d');
+    let nodePositions = [];
+
+    function computeNodePositions(agents) {
+      const W = canvas.width;
+      const H = canvas.height;
+      const cx = W / 2;
+      const cy = H / 2;
+      const rx = W * 0.36;
+      const ry = H * 0.35;
+      return agents.map((a, idx) => {
+        const angle = (idx / agents.length) * Math.PI * 2 - Math.PI / 2;
+        const rRadius = a.tier === 'ColossalOrganism' ? 28 : (a.tier === 'StandardNode' ? 21 : 15);
+        return {
+          x: cx + Math.cos(angle) * rx,
+          y: cy + Math.sin(angle) * ry,
+          r: rRadius,
+          agent: a
+        };
+      });
+    }
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+      nodePositions.forEach((np, idx) => {
+        const d = Math.hypot(mx - np.x, my - np.y);
+        if (d <= np.r + 10) {
+          selectedAgentIdx = idx;
+          if (currentState) applyState(currentState);
+        }
+      });
+    });
+
+    function renderCanvasFrame() {
+      const isLight = document.documentElement.classList.contains('light');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (currentState && currentState.agents) {
+        nodePositions = computeNodePositions(currentState.agents);
+
+        // Faint synaptic mesh lines
+        ctx.strokeStyle = isLight ? 'rgba(100,116,139,0.16)' : 'rgba(148,163,184,0.12)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < nodePositions.length; i++) {
+          for (let j = i + 1; j < nodePositions.length; j++) {
+            const sameCluster = nodePositions[i].agent.cluster_prefix_bin === nodePositions[j].agent.cluster_prefix_bin;
+            if (sameCluster || (i + j) % 3 === 0) {
+              ctx.beginPath();
+              ctx.moveTo(nodePositions[i].x, nodePositions[i].y);
+              ctx.lineTo(nodePositions[j].x, nodePositions[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Animated UDP Impulses
+        const survivingPulses = [];
+        for (const p of flyingPulses) {
+          p.t += 0.045;
+          const src = nodePositions[p.from];
+          const dst = nodePositions[p.to];
+          if (!src || !dst) continue;
+
+          const maxT = p.dropped ? 0.52 : 1.0;
+          if (p.t < maxT) {
+            survivingPulses.push(p);
+            const px = src.x + (dst.x - src.x) * p.t;
+            const py = src.y + (dst.y - src.y) * p.t;
+
+            ctx.beginPath();
+            if (p.dropped && p.t > 0.38) {
+              ctx.fillStyle = '#f43f5e';
+              ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+            } else {
+              ctx.fillStyle = p.kind === 'voucher' ? '#34d399' : (p.kind === 'fountain' ? '#a78bfa' : '#38bdf8');
+              ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+            }
+            ctx.fill();
+          }
+        }
+        flyingPulses = survivingPulses;
+
+        // Draw Multicellular Agent Nodes
+        nodePositions.forEach((np, idx) => {
+          const isSelected = idx === selectedAgentIdx;
+          const isAlice = np.agent.owner.startsWith('Alice');
+
+          if (isSelected) {
+            ctx.beginPath();
+            ctx.arc(np.x, np.y, np.r + 7, 0, Math.PI * 2);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+          }
+
+          // Outer Membrane Ring
+          ctx.beginPath();
+          ctx.arc(np.x, np.y, np.r, 0, Math.PI * 2);
+          ctx.fillStyle = isLight ? '#e2e8f0' : '#1e293b';
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = isAlice ? '#f59e0b' : '#10b981';
+          ctx.stroke();
+
+          // Inner Cellular Nucleus Core
+          const innerR = Math.max(5, np.r * 0.52);
+          ctx.beginPath();
+          ctx.arc(np.x, np.y, innerR, 0, Math.PI * 2);
+          ctx.fillStyle = np.agent.tier === 'ColossalOrganism' ? '#0ea5e9' : (np.agent.tier === 'StandardNode' ? '#8b5cf6' : '#14b8a6');
+          ctx.fill();
+
+          // Labels
+          ctx.fillStyle = isLight ? '#0f172a' : '#f8fafc';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(np.agent.name, np.x, np.y + np.r + 16);
+
+          ctx.fillStyle = isLight ? '#475569' : '#94a3b8';
+          ctx.font = '12px monospace';
+          ctx.fillText(`${np.agent.total_cells}c • ${np.agent.cluster_prefix_bin}`, np.x, np.y + np.r + 30);
+        });
+      }
+      requestAnimationFrame(renderCanvasFrame);
+    }
+
+    pollTelemetry();
+    setInterval(pollTelemetry, 450);
+    requestAnimationFrame(renderCanvasFrame);
+  </script>
+</body>
+</html>

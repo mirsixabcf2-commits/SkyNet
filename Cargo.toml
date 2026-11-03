@@ -1,0 +1,37 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/skynet-dna",
+    "crates/skynet-cell",
+    "crates/skynet-ledger",
+    "crates/skynet-wire",
+    "crates/skynet-agent",
+    "crates/skynet-sim",
+    "crates/skynet-dashboard",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.83.0"
+license = "MIT OR Apache-2.0"
+authors = ["SkyNet Protocol Contributors"]
+
+[workspace.dependencies]
+blake3 = "=1.5.5"
+bincode = "1.3.3"
+candle-core = "=0.8.0"
+ed25519-dalek = { version = "=2.1.1", features = ["rand_core", "serde"] }
+half = "=2.4.1"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "=1.41.1", features = ["rt-multi-thread", "net", "time", "sync", "macros", "io-util"] }
+
+skynet-dna = { path = "crates/skynet-dna" }
+skynet-cell = { path = "crates/skynet-cell" }
+skynet-ledger = { path = "crates/skynet-ledger" }
+skynet-wire = { path = "crates/skynet-wire" }
+skynet-agent = { path = "crates/skynet-agent" }
