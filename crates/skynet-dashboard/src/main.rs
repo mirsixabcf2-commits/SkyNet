@@ -1,4 +1,4 @@
-//! `skynet-dashboard`: Real-time HTTP + JSON telemetry server (`127.0.0.1:8787`)
+//! `skynet-dashboard`: Real-time HTTP + JSON telemetry server (`127.0.0.1:8888`)
 //! driving 8 live Multicellular `AgentNode`s (`candle` tensors + real `tokio::net::UdpSocket`s
 //! + `Utreexo` roots + `O(log N)` `SynapticPeerTable` + `HumanWallet` custody).
 
@@ -19,12 +19,16 @@ use skynet_ledger::{
     UtxoDagLedger, GENESIS_TOTAL_NANO_SKN, NANO_PER_SKN,
 };
 use skynet_wire::{ImpulseBody, ImpulsePacket, PeerContact};
+use skynet_node::StorageEngine;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, UdpSocket};
 use tokio::sync::Mutex;
 
+mod preprocess_api;
+
 const DASHBOARD_HTML: &str = include_str!("../assets/dashboard.html");
-const BIND_HTTP_ADDR: &str = "127.0.0.1:8787";
+const DEFAULT_BIND_HOST: &str = "127.0.0.1";
+const DEFAULT_DASHBOARD_PORT: u16 = 8888;
 
 #[derive(Debug, Clone, Serialize)]
 struct SupplyDto {
@@ -91,6 +95,23 @@ struct ImpulseTrace {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct LiveNodeStatusDto {
+    is_active: bool,
+    name: String,
+    pubkey_hex: String,
+    tier: String,
+    epoch: u64,
+    pulse_seq: u32,
+    on_chain_balance_skn: String,
+    blood_pool_skn: String,
+    voucher_earned_nano: u128,
+    total_cells: usize,
+    roles: RolesDto,
+    stored_peers: usize,
+    data_dir: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct DashboardSnapshot {
     tick: u64,
     udp_loss_rate: f64,
@@ -100,6 +121,7 @@ struct DashboardSnapshot {
     agents: Vec<AgentDto>,
     recent_impulses: Vec<ImpulseTrace>,
     events: Vec<String>,
+    live_node: Option<LiveNodeStatusDto>,
 }
 
 enum ControlCmd {
@@ -328,7 +350,9 @@ impl LiveWorld {
         }
 
         // Periodic Fountain Plasmid DNA exchange from Colossal GPU Agent to Peripheral Agents
+        #[allow(clippy::manual_is_multiple_of)]
         if self.tick % 5 == 0 {
+            #[allow(clippy::manual_is_multiple_of)]
             let dst = if self.tick % 10 == 0 { 6 } else { 7 };
             if let Ok(droplets) = self.agents[0].encode_elite_plasmid_droplets(6) {
                 for pkt in droplets {
@@ -681,8 +705,66 @@ impl LiveWorld {
             agents: agent_dtos,
             recent_impulses: self.recent_impulses.clone(),
             events: self.events.iter().cloned().collect(),
+            live_node: detect_local_live_node(),
         }
     }
+}
+
+fn detect_local_live_node() -> Option<LiveNodeStatusDto> {
+    let data_dir = std::env::var("SKYNET_DATA_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            std::path::PathBuf::from(home).join(".skynet").join("data")
+        });
+
+    let storage = StorageEngine::new(&data_dir).ok()?;
+    if !storage.has_existing_state() {
+        return None;
+    }
+
+    let meta = storage.load_metadata().ok()??;
+    let org = storage.load_organism().ok()??;
+    let ledger = storage.load_ledger().ok()??;
+    let peers = storage.load_peers().unwrap_or_default();
+
+    let mut stem = 0;
+    let mut epidermal = 0;
+    let mut vascular = 0;
+    let mut visceral = 0;
+    let mut neural = 0;
+    for c in &org.cells {
+        match c.role() {
+            CellRole::Stem => stem += 1,
+            CellRole::Epidermal => epidermal += 1,
+            CellRole::Vascular => vascular += 1,
+            CellRole::Visceral => visceral += 1,
+            CellRole::Neural => neural += 1,
+        }
+    }
+
+    let on_chain = ledger.balance_of(&meta.pubkey);
+    Some(LiveNodeStatusDto {
+        is_active: true,
+        name: meta.name,
+        pubkey_hex: meta.pubkey.iter().map(|b| format!("{:02x}", b)).collect(),
+        tier: format!("{:?}", meta.tier),
+        epoch: meta.epoch,
+        pulse_seq: meta.pulse_seq,
+        on_chain_balance_skn: format_skn_short(on_chain),
+        blood_pool_skn: format_skn_short(org.blood_pool),
+        voucher_earned_nano: org.total_voucher_nano_earned.0,
+        total_cells: org.cells.len(),
+        roles: RolesDto {
+            stem,
+            epidermal,
+            vascular,
+            visceral,
+            neural,
+        },
+        stored_peers: peers.len(),
+        data_dir: data_dir.to_string_lossy().to_string(),
+    })
 }
 
 fn format_with_commas(mut n: u128) -> String {
@@ -706,11 +788,134 @@ fn format_skn_short(v: NanoSkn) -> String {
     format!("{}.{:03} SKN", format_with_commas(v.whole_skn()), millis)
 }
 
+fn resolve_dashboard_port() -> u16 {
+    if let Ok(v) = std::env::var("SKYNET_PORT") {
+        if let Ok(p) = v.parse::<u16>() {
+            return p;
+        }
+    }
+    if let Ok(v) = std::env::var("PORT") {
+        if let Ok(p) = v.parse::<u16>() {
+            return p;
+        }
+    }
+    DEFAULT_DASHBOARD_PORT
+}
+
+fn handle_control_post(w: &mut LiveWorld, path: &str) {
+    let query = path.split('?').nth(1).unwrap_or("");
+    let mut action = "";
+    let mut val = "";
+    for kv in query.split('&') {
+        if let Some((k, v)) = kv.split_once('=') {
+            if k == "action" {
+                action = v;
+            } else if k == "value" {
+                val = v;
+            }
+        }
+    }
+    match action {
+        "loss" => {
+            if let Ok(r) = val.parse::<f64>() {
+                w.apply_control(ControlCmd::SetLoss(r));
+            }
+        }
+        "flood_ips" => w.apply_control(ControlCmd::FloodIps),
+        "cluster_mitosis" => w.apply_control(ControlCmd::ClusterMitosis),
+        "double_spend" => w.apply_control(ControlCmd::DoubleSpend),
+        "reclaim_iot" => w.apply_control(ControlCmd::ReclaimIot),
+        _ => {}
+    }
+}
+
+fn is_allowed_origin(origin: &str) -> bool {
+    origin.is_empty()
+        || origin.starts_with("http://127.0.0.1")
+        || origin.starts_with("http://localhost")
+        || origin.starts_with("https://127.0.0.1")
+        || origin.starts_with("https://localhost")
+}
+
+fn extract_header<'a>(req: &'a str, header_name: &str) -> &'a str {
+    for line in req.lines().skip(1) {
+        if let Some((k, v)) = line.split_once(':') {
+            if k.trim().eq_ignore_ascii_case(header_name) {
+                return v.trim();
+            }
+        }
+    }
+    ""
+}
+
+async fn handle_connection(mut stream: tokio::net::TcpStream, world: Arc<Mutex<LiveWorld>>) {
+    let mut buf = [0u8; 4096];
+    let Ok(n) = stream.read(&mut buf).await else { return; };
+    if n == 0 { return; }
+
+    let req = String::from_utf8_lossy(&buf[..n]);
+    let first_line = req.lines().next().unwrap_or("");
+    let mut parts = first_line.split_whitespace();
+    let method = parts.next().unwrap_or("GET");
+    let path = parts.next().unwrap_or("/");
+
+    let origin = extract_header(&req, "Origin");
+    let sec_fetch_site = extract_header(&req, "Sec-Fetch-Site");
+
+    // Mitigates SEC-10: Block cross-site or unapproved origin requests against control endpoints
+    if method == "POST"
+        && path.starts_with("/api/control")
+        && (sec_fetch_site.eq_ignore_ascii_case("cross-site")
+            || (!origin.is_empty() && !is_allowed_origin(origin)))
+    {
+        let forbidden = "HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nForbidden: Cross-site control rejected";
+        let _ = stream.write_all(forbidden.as_bytes()).await;
+        return;
+    }
+
+    let cors_allow_origin = if is_allowed_origin(origin) && !origin.is_empty() {
+        origin
+    } else {
+        "http://127.0.0.1:8888"
+    };
+
+    let (status, content_type, body) = if method == "OPTIONS" {
+        ("204 No Content", "text/plain", String::new())
+    } else if path == "/" || path.starts_with("/index.html") {
+        ("200 OK", "text/html; charset=utf-8", DASHBOARD_HTML.to_string())
+    } else if path.starts_with("/api/state") {
+        let snap = {
+            let w = world.lock().await;
+            w.snapshot()
+        };
+        let json = serde_json::to_string(&snap).unwrap_or_else(|_| "{}".to_string());
+        ("200 OK", "application/json; charset=utf-8", json)
+    } else if method == "POST" && path.starts_with("/api/control") {
+        let mut w = world.lock().await;
+        handle_control_post(&mut w, path);
+        ("200 OK", "application/json", "{\"ok\":true}".to_string())
+    } else if path.starts_with("/api/presets") {
+        let json = preprocess_api::handle_presets_request();
+        ("200 OK", "application/json; charset=utf-8", json)
+    } else if method == "POST" && path.starts_with("/api/preprocess") {
+        let body_str = preprocess_api::extract_http_body(&req);
+        let res_json = preprocess_api::handle_preprocess_request(body_str);
+        ("200 OK", "application/json; charset=utf-8", res_json)
+    } else {
+        ("404 Not Found", "text/plain", "Not Found".to_string())
+    };
+
+    let resp = format!(
+        "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: {cors_allow_origin}\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nVary: Origin\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    let _ = stream.write_all(resp.as_bytes()).await;
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let world = Arc::new(Mutex::new(LiveWorld::init().await?));
 
-    // Spawn background 400ms live bio-cellular + UDP simulation loop
     let bg_world = Arc::clone(&world);
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_millis(400));
@@ -721,75 +926,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let listener = TcpListener::bind(BIND_HTTP_ADDR).await?;
+    let port = resolve_dashboard_port();
+    let bind_http_addr = format!("{DEFAULT_BIND_HOST}:{port}");
+    let listener = TcpListener::bind(&bind_http_addr).await?;
     println!("==================================================================");
-    println!("  SKYNET REAL-TIME DASHBOARD SERVER RUNNING AT http://{BIND_HTTP_ADDR}");
+    println!("  SKYNET REAL-TIME DASHBOARD SERVER RUNNING AT http://{bind_http_addr}");
     println!("==================================================================");
 
     loop {
-        let (mut stream, _) = listener.accept().await?;
+        let (stream, _) = listener.accept().await?;
         let req_world = Arc::clone(&world);
-        tokio::spawn(async move {
-            let mut buf = [0u8; 4096];
-            let Ok(n) = stream.read(&mut buf).await else {
-                return;
-            };
-            if n == 0 {
-                return;
-            }
-            let req = String::from_utf8_lossy(&buf[..n]);
-            let first_line = req.lines().next().unwrap_or("");
-            let mut parts = first_line.split_whitespace();
-            let method = parts.next().unwrap_or("GET");
-            let path = parts.next().unwrap_or("/");
-
-            let (status, content_type, body) = if method == "OPTIONS" {
-                ("204 No Content", "text/plain", String::new())
-            } else if path == "/" || path.starts_with("/index.html") {
-                ("200 OK", "text/html; charset=utf-8", DASHBOARD_HTML.to_string())
-            } else if path.starts_with("/api/state") {
-                let snap = {
-                    let w = req_world.lock().await;
-                    w.snapshot()
-                };
-                let json = serde_json::to_string(&snap).unwrap_or_else(|_| "{}".to_string());
-                ("200 OK", "application/json; charset=utf-8", json)
-            } else if method == "POST" && path.starts_with("/api/control") {
-                let query = path.split('?').nth(1).unwrap_or("");
-                let mut action = "";
-                let mut val = "";
-                for kv in query.split('&') {
-                    if let Some((k, v)) = kv.split_once('=') {
-                        if k == "action" {
-                            action = v;
-                        } else if k == "value" {
-                            val = v;
-                        }
-                    }
-                }
-                let mut w = req_world.lock().await;
-                match action {
-                    "loss" => {
-                        if let Ok(r) = val.parse::<f64>() {
-                            w.apply_control(ControlCmd::SetLoss(r));
-                        }
-                    }
-                    "flood_ips" => w.apply_control(ControlCmd::FloodIps),
-                    "cluster_mitosis" => w.apply_control(ControlCmd::ClusterMitosis),
-                    "double_spend" => w.apply_control(ControlCmd::DoubleSpend),
-                    "reclaim_iot" => w.apply_control(ControlCmd::ReclaimIot),
-                    _ => {}
-                }
-                ("200 OK", "application/json", "{\"ok\":true}".to_string())
-            } else {
-                ("404 Not Found", "text/plain", "Not Found".to_string())
-            };
-
-            let resp = format!(
-                "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nConnection: close\r\n\r\n{body}",
-                body.len()
-            );
-            let _ = stream.write_all(resp.as_bytes()).await;
-        });
+        tokio::spawn(handle_connection(stream, req_world));
     }
 }

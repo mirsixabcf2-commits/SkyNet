@@ -18,6 +18,7 @@
 - **Biểu diễn số học:** `NanoSkn(u128)` (`21_000_000_000_000_000_000_000 nanoSKN`, an toàn chống tràn số vượt xa giới hạn `u64`).
 - **Chu kỳ Halving:** Giảm `50%` lượng phân phối từ Kho Dự trữ Genesis sau mỗi `1 năm`.
 - **Bảo toàn Năng lượng Hai tầng:** Tổng `nanoSKN` trong Kho Dự trữ + trên chuỗi UTXO-DAG + dòng máu nội bộ + tổng năng lượng từng tế bào AI luôn bằng đúng `21 nghìn tỉ SKN`.
+- **Cân Bằng Kinh Tế (Node Miner vs. Người Dùng):** Giải quyết xung đột lợi ích bằng kênh nén $M:1$ qua `SynapticVoucher` (phí cận 0 cho mỗi lượt gọi), nguồn thu kép từ Điện toán hữu ích (Useful Compute: suy luận, tiến hóa gen, chợ Plasmid), và Bể dưỡng chất cụm (`Cluster Nutrient Pool`). Chi tiết xem tại [TECHNOLOGY_EXPLAINER.md (Mục 7)](file:///Users/pain/DATA/Projects/SkyNet/docs/TECHNOLOGY_EXPLAINER.md).
 
 ## 3. Cấu trúc Workspace
 - `crates/skynet-dna`: Mã di truyền `CellDna`, `ConservedGenes`, `AdaptiveGenes`, `EpigeneticMask`, nhân bản, đột biến & lai ghép gen.
@@ -68,3 +69,10 @@ Nếu lưu phẳng toàn bộ danh sách IP của `100 triệu` Node (`~80 bytes
    - Hàng trăm triệu thiết bị yếu, di động hoặc nằm sau NAT 4G/Wi-Fi không cần có IP công cộng và không ghi vào bảng định tuyến toàn cầu; chúng chỉ mở kết nối UDP ra ngoài tới `2–3` Node lớn công cộng trong cụm, giảm >90% biến động IP toàn mạng.
 3. **Cắt tỉa Khớp Thần kinh Hebbian (`Hebbian Synaptic Pruning`):**
    - Khi một ngăn chứa IP đầy, luật cạnh tranh dựa trên **độ phản hồi thực tế + lượng `SKN` thế chấp** sẽ tự động đào thải các IP chết hoặc IP ảo không có vốn (chống tấn công lụt IP Sybil/Eclipse) mà không bao giờ làm phình bộ nhớ.
+
+## 8. Tài Liệu Kỹ Thuật Bổ Sung & Chuyên Sâu
+- 🎁 **Cơ chế Tiếp thị Khởi tạo & Airdrop HWID:** Xem [MARKETING_AIRDROP_SPEC.md](file:///Users/pain/DATA/Projects/SkyNet/docs/MARKETING_AIRDROP_SPEC.md) về giải pháp airdrop theo HWID chống lạm phát và chống gian lận máy ảo qua PoPE vi nơ-ron Candle.
+- 🔍 **Chi tiết Cơ chế Tự Quét & Khởi Tạo Mạng Sơ khai:** Xem [NODE_DISCOVERY_AND_BOOTSTRAP.md](file:///Users/pain/DATA/Projects/SkyNet/docs/NODE_DISCOVERY_AND_BOOTSTRAP.md) để nắm rõ 4 tầng Chemotaxis Discovery (LAN Multicast, DNS Seeds, PEX, và UDP Hole Punching).
+- 🧠 **Bản Giải Thích Công Nghệ Chuyên Sâu:** Xem [TECHNOLOGY_EXPLAINER.md](file:///Users/pain/DATA/Projects/SkyNet/docs/TECHNOLOGY_EXPLAINER.md) phân tích sâu về tế bào học `MicroCell`, bảo toàn năng lượng `u128 nanoSKN`, mã hóa Fountain GF(2) và lưu ký Soul-Body.
+- 📚 **Cổng Thông Tin Tài Liệu & Sách Trắng:** Xem [README.md](file:///Users/pain/DATA/Projects/SkyNet/docs/README.md) và [Whitepaper Đa Ngôn Ngữ](file:///Users/pain/DATA/Projects/SkyNet/docs/whitepaper/README.md).
+

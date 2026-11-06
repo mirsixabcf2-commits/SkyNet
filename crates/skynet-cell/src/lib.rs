@@ -9,6 +9,17 @@ use skynet_dna::{CellDna, CellRole, DnaError};
 use skynet_ledger::{LedgerError, NanoSkn};
 use thiserror::Error;
 
+pub mod compute_candle;
+pub use compute_candle::{
+    CandleComputeExecutor, CandleTaskInput, CandleTaskOutput, ComputeCandleError,
+};
+
+pub mod pope_benchmark;
+pub use pope_benchmark::{
+    compute_pope_challenge, verify_pope_proof, verify_pope_proof_with_latency,
+    PopeChallengeParams, PopeError, PopeProof,
+};
+
 #[derive(Debug, Error)]
 pub enum CellError {
     #[error("DNA error: {0}")]
@@ -320,7 +331,7 @@ impl TissueBatch {
         let y = (new_h.matmul(&w2)? + &b2)?.tanh()?.broadcast_mul(&gain)?;
 
         let new_h_2d = new_h.squeeze(1)?.to_vec2::<f32>()?;
-        for (cell, next_state) in cells.iter_mut().zip(new_h_2d.into_iter()) {
+        for (cell, next_state) in cells.iter_mut().zip(new_h_2d) {
             cell.hidden_state = next_state;
         }
 

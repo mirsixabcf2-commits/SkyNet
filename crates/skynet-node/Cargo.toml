@@ -1,0 +1,42 @@
+[package]
+name = "skynet-node"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = []
+metal = ["skynet-agent/metal"]
+cuda = ["skynet-agent/cuda"]
+
+[[bin]]
+name = "skynet-node"
+path = "src/main.rs"
+
+[[bin]]
+name = "skynet"
+path = "src/bin/skynet.rs"
+
+[[bin]]
+name = "skynet-agent"
+path = "src/bin/skynet_agent.rs"
+
+[dependencies]
+bincode.workspace = true
+blake3.workspace = true
+candle-core.workspace = true
+ed25519-dalek.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+skynet-agent.workspace = true
+skynet-cell.workspace = true
+skynet-dna.workspace = true
+skynet-ledger.workspace = true
+skynet-wire.workspace = true

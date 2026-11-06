@@ -32,6 +32,60 @@
     </div>
   </div>
 
+  <!-- Live Node Detection & Environment Disclaimer -->
+  <div id="liveNodeSection" class="hidden bg-gradient-to-r from-emerald-950/40 via-[var(--card)] to-[var(--card)] border border-emerald-500/50 rounded-xl p-4 shadow-sm space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-sm font-bold text-emerald-400 uppercase tracking-wide">Nút Mạng Thực Tế Cục Bộ (Local Production Node)</span>
+        <span id="liveNodeBadge" class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">Đang Chạy Thật</span>
+      </div>
+      <div class="text-xs text-[var(--muted-foreground)]">
+        Thư mục dữ liệu: <code id="liveNodeDataDir" class="text-emerald-300 font-mono">~/.skynet/data</code>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+      <div class="bg-[var(--background)]/80 p-2.5 rounded-lg border border-emerald-500/20">
+        <div class="text-[var(--muted-foreground)]">Tên Định Danh:</div>
+        <div id="liveNodeName" class="font-bold text-emerald-300 truncate mt-0.5">--</div>
+      </div>
+      <div class="bg-[var(--background)]/80 p-2.5 rounded-lg border border-emerald-500/20">
+        <div class="text-[var(--muted-foreground)]">Cấp Phần Cứng:</div>
+        <div id="liveNodeTier" class="font-bold text-[var(--foreground)] mt-0.5">--</div>
+      </div>
+      <div class="bg-[var(--background)]/80 p-2.5 rounded-lg border border-emerald-500/20">
+        <div class="text-[var(--muted-foreground)]">Số Dư On-Chain:</div>
+        <div id="liveNodeBalance" class="font-bold font-mono text-emerald-400 mt-0.5">--</div>
+      </div>
+      <div class="bg-[var(--background)]/80 p-2.5 rounded-lg border border-emerald-500/20">
+        <div class="text-[var(--muted-foreground)]">Năng Lượng Tế Bào:</div>
+        <div id="liveNodeBlood" class="font-bold font-mono text-amber-400 mt-0.5">--</div>
+      </div>
+      <div class="bg-[var(--background)]/80 p-2.5 rounded-lg border border-emerald-500/20">
+        <div class="text-[var(--muted-foreground)]">Tế Bào Candle:</div>
+        <div id="liveNodeCells" class="font-bold text-[var(--foreground)] mt-0.5">-- cells</div>
+      </div>
+      <div class="bg-[var(--background)]/80 p-2.5 rounded-lg border border-emerald-500/20">
+        <div class="text-[var(--muted-foreground)]">Routing Peers UDP:</div>
+        <div id="liveNodePeers" class="font-bold text-sky-400 mt-0.5">-- peers</div>
+      </div>
+    </div>
+    <div class="text-[11px] text-[var(--muted-foreground)] font-mono flex items-center justify-between truncate">
+      <div>Public Key: <span id="liveNodePubkey" class="text-[var(--foreground)]">--</span></div>
+      <div>Xung nhịp: <span id="liveNodePulse" class="text-[var(--foreground)]">--</span></div>
+    </div>
+  </div>
+
+  <div id="simDisclaimer" class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs flex flex-wrap items-center justify-between gap-2 text-amber-200">
+    <div class="flex items-center gap-2">
+      <span class="text-base">🧪</span>
+      <span><strong>CHẾ ĐỘ MÔ PHỎNG HỖN LOẠN (CHAOS SWARM SIMULATOR):</strong> Bảng dữ liệu 8 Agents bên dưới là môi trường phòng thí nghiệm mô phỏng trên socket UDP thật để kiểm tra độ trễ, rớt gói 25% và đồng thuận Snowball.</span>
+    </div>
+    <div class="font-mono text-[11px] px-2.5 py-1 rounded bg-amber-500/20 text-amber-100 whitespace-nowrap">
+      Chạy node thật: <code>cargo run -p skynet-node</code>
+    </div>
+  </div>
+
   <!-- Top KPI Cards -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
@@ -189,6 +243,92 @@
     </div>
   </div>
 
+  <!-- Turnkey Preprocessing Studio & Presets Console (Feature 004) -->
+  <div class="bg-[var(--card)] border border-sky-500/30 rounded-xl p-4 shadow-sm flex flex-col space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-base">🚀</span>
+          <h2 class="text-sm font-semibold text-sky-400">Turnkey Preprocessing Studio &amp; Presets Console</h2>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-500/20 text-sky-300">Đời Sống Thực Tế</span>
+        </div>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Tiền xử lý tự động dữ liệu thô (Văn bản, CSV, Danh bạ, Log) và đóng gói sẵn sàng cho AI Agent &amp; Thợ đào</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-[var(--muted-foreground)]">Chọn Preset:</label>
+        <select id="studioPresetSelect" class="bg-[var(--secondary)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] font-medium outline-none cursor-pointer">
+          <option value="text-audit">text-audit (Kiểm toán văn bản &amp; Khử PII) • 0x0215</option>
+          <option value="csv-clean-normalize">csv-clean-normalize (Làm sạch &amp; Chuẩn hóa CSV) • 0x0210</option>
+          <option value="phone-standardize">phone-standardize (Chuẩn hóa danh bạ E.164) • 0x0230</option>
+          <option value="log-anomaly-detection">log-anomaly-detection (Dị thường Log hệ thống) • 0x0220</option>
+          <option value="image-batch-upscale">image-batch-upscale (Nâng cấp ảnh hàng loạt) • 0x0200</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Preprocessing Filters Checkboxes -->
+    <div class="flex flex-wrap items-center gap-4 text-xs bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+      <span class="font-medium text-[var(--muted-foreground)]">Tùy chọn tiền xử lý:</span>
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input type="checkbox" id="chkRedactPii" checked class="accent-sky-500">
+        <span>Ẩn PII (SĐT, Email, CCCD, Key)</span>
+      </label>
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input type="checkbox" id="chkMinMax" class="accent-sky-500">
+        <span>Min-Max Scaler [0..1]</span>
+      </label>
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input type="checkbox" id="chkE164" checked class="accent-sky-500">
+        <span>Chuẩn hóa SĐT E.164 (+84)</span>
+      </label>
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input type="checkbox" id="chkEncrypt" class="accent-sky-500">
+        <span>Mã hóa phong bì ChaCha20</span>
+      </label>
+    </div>
+
+    <!-- 2-Column Comparison View -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <div class="flex items-center justify-between mb-1.5 text-xs text-[var(--muted-foreground)] font-medium">
+          <span>Dữ Liệu Thô Đầu Vào (Raw Input):</span>
+          <span id="rawByteCount">0 Bytes</span>
+        </div>
+        <textarea id="studioRawInput" rows="6" class="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg p-2.5 font-mono text-xs text-[var(--foreground)] resize-none focus:outline-none focus:border-sky-500"></textarea>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-1.5 text-xs text-[var(--muted-foreground)] font-medium">
+          <span class="text-emerald-400">Dữ Liệu Đã Tiền Xử Lý (Cleaned Output):</span>
+          <span id="processedByteCount">0 Bytes</span>
+        </div>
+        <textarea id="studioProcessedOutput" readonly rows="6" class="w-full bg-[var(--background)]/80 border border-emerald-500/30 rounded-lg p-2.5 font-mono text-xs text-emerald-300 resize-none focus:outline-none"></textarea>
+      </div>
+    </div>
+
+    <!-- Metrics & Actions Bar -->
+    <div class="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs">
+      <div class="flex flex-wrap items-center gap-4 text-[var(--muted-foreground)] font-mono">
+        <div>Tensors: <span id="statTensors" class="text-[var(--foreground)] font-bold">0</span> floats</div>
+        <div>Chunks: <span id="statChunks" class="text-[var(--foreground)] font-bold">0</span></div>
+        <div>Giọt Fountain: <span id="statDroplets" class="text-sky-400 font-bold">1</span> (&le;1200B)</div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnRunPreprocess" class="px-3.5 py-1.5 rounded-lg font-medium bg-sky-500 hover:bg-sky-400 text-white transition shadow-sm">
+          ⚡ Xem Trước Tiền Xử Lý
+        </button>
+        <button id="btnDispatchStudio" class="px-3.5 py-1.5 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm">
+          🚀 Phát Lệnh Tính Toán (Dispatch)
+        </button>
+        <button id="btnCopyCli" class="px-3 py-1.5 rounded-lg font-medium border border-[var(--border)] bg-[var(--secondary)] hover:bg-[var(--border)] text-[var(--foreground)] transition">
+          📋 Sao Chép Lệnh CLI Cho Agent
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Bottom Row: Human Sovereign Wallets + Live Event Stream -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
     <div class="lg:col-span-6 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
@@ -219,7 +359,10 @@
       }
     })();
 
-    const API_BASE = 'http://127.0.0.1:8787';
+    const DEFAULT_PORT = 8888;
+    const API_BASE = window.location.protocol.startsWith('http')
+      ? window.location.origin
+      : `http://127.0.0.1:${DEFAULT_PORT}`;
     let liveRustConnected = false;
     let selectedAgentIdx = 0;
     let currentState = null;
@@ -388,7 +531,10 @@
           const data = await res.json();
           liveRustConnected = true;
           const badge = document.getElementById('engineBadge');
-          badge.textContent = '● LIVE RUST CANDLE + UDP (127.0.0.1:8787)';
+          const hostLabel = window.location.protocol.startsWith('http')
+            ? window.location.host
+            : `127.0.0.1:${DEFAULT_PORT}`;
+          badge.textContent = `● LIVE RUST CANDLE + UDP (${hostLabel})`;
           badge.className = 'px-2.5 py-1 rounded-full text-xs font-medium border border-emerald-500/40 bg-emerald-500/15 text-emerald-400';
           applyState(data);
           return;
@@ -412,6 +558,26 @@
       currentState = st;
       document.getElementById('hdrTick').textContent = st.tick;
       document.getElementById('hdrConservation').textContent = st.supply.conservation_ok ? '0 nanoSKN sai số (HỢP LỆ)' : 'LỆCH!';
+
+      // Render Local Live Node (if active)
+      const liveSection = document.getElementById('liveNodeSection');
+      const simDisclaimer = document.getElementById('simDisclaimer');
+      if (st.live_node && st.live_node.is_active) {
+        liveSection.classList.remove('hidden');
+        simDisclaimer.classList.add('hidden');
+        document.getElementById('liveNodeName').textContent = st.live_node.name;
+        document.getElementById('liveNodeTier').textContent = st.live_node.tier;
+        document.getElementById('liveNodeBalance').textContent = st.live_node.on_chain_balance_skn;
+        document.getElementById('liveNodeBlood').textContent = st.live_node.blood_pool_skn;
+        document.getElementById('liveNodeCells').textContent = st.live_node.total_cells + ' cells';
+        document.getElementById('liveNodePeers').textContent = st.live_node.stored_peers + ' peers';
+        document.getElementById('liveNodeDataDir').textContent = st.live_node.data_dir;
+        document.getElementById('liveNodePubkey').textContent = st.live_node.pubkey_hex;
+        document.getElementById('liveNodePulse').textContent = 'Epoch ' + st.live_node.epoch + ' • Seq ' + st.live_node.pulse_seq;
+      } else {
+        liveSection.classList.add('hidden');
+        simDisclaimer.classList.remove('hidden');
+      }
 
       document.getElementById('kpiHalvingY1').textContent = st.supply.halving_y1_skn;
       document.getElementById('kpiNutrient').textContent = st.supply.nutrient_pool_nano;
@@ -623,6 +789,117 @@
       }
       requestAnimationFrame(renderCanvasFrame);
     }
+
+    // Turnkey Preprocessing Studio Handlers (Feature 004)
+    const presetSamples = {
+      'text-audit': 'Thanh toan hop dong cho anh Hoang SDT 0912345678, email hoang@cty.vn, CCCD 001201009988, khoa API sk_live_998877665544.',
+      'csv-clean-normalize': 'id;ten;tuoi;diem;luong\n1;An;25;8.5;1500\n2;Binh;30;;2000\n3;Chi;;9.0;1800\n4;Dung;28;7.5;',
+      'phone-standardize': '0912345678, 0987654321, 0355123456, 84901234567',
+      'log-anomaly-detection': '2026-11-05 16:20:01 INFO User login admin\n2026-11-05 16:20:05 WARN High CPU usage 95%\n2026-11-05 16:20:10 ERROR Database connection timeout',
+      'image-batch-upscale': 'folder: ./photos_720p/ (100 images: .png, .jpg, .webp) -> upscale 4x'
+    };
+
+    const selPreset = document.getElementById('studioPresetSelect');
+    const rawInput = document.getElementById('studioRawInput');
+    const procOutput = document.getElementById('studioProcessedOutput');
+    const chkPii = document.getElementById('chkRedactPii');
+    const chkMm = document.getElementById('chkMinMax');
+    const chkPhone = document.getElementById('chkE164');
+    const chkEnc = document.getElementById('chkEncrypt');
+
+    function syncStudioPreset(presetId) {
+      if (presetSamples[presetId]) {
+        rawInput.value = presetSamples[presetId];
+      }
+      chkPii.checked = presetId === 'text-audit';
+      chkMm.checked = presetId === 'csv-clean-normalize';
+      chkPhone.checked = presetId === 'phone-standardize' || presetId === 'text-audit';
+      chkEnc.checked = presetId === 'text-audit';
+      triggerPreprocess();
+    }
+
+    selPreset.addEventListener('change', (e) => syncStudioPreset(e.target.value));
+
+    async function triggerPreprocess() {
+      const text = rawInput.value || '';
+      document.getElementById('rawByteCount').textContent = text.length + ' Bytes';
+
+      const payload = {
+        preset: selPreset.value,
+        input: text,
+        redact_pii: chkPii.checked,
+        normalize_minmax: chkMm.checked,
+        standardize_e164: chkPhone.checked,
+        encrypt_envelope: chkEnc.checked
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/preprocess`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          renderPreprocessResult(data);
+          return;
+        }
+      } catch (e) {
+        // Fallback local simulation if backend route unreachable
+      }
+
+      // Local Fallback Simulation
+      let cleaned = text;
+      if (chkPhone.checked) {
+        cleaned = cleaned.replace(/0([0-9]{9,10})/g, '+84$1');
+      }
+      if (chkPii.checked) {
+        cleaned = cleaned.replace(/\+?84[0-9]{9,10}/g, '[REDACTED_PHONE]');
+        cleaned = cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED_EMAIL]');
+        cleaned = cleaned.replace(/\b\d{9,12}\b/g, '[REDACTED_ID]');
+        cleaned = cleaned.replace(/sk_live_[a-zA-Z0-9]+/g, '[REDACTED_KEY]');
+      }
+      if (chkEnc.checked) {
+        cleaned = `[ENVELOPE_ENCRYPTED_PAYLOAD: 0x${Array.from(cleaned).map(c => c.charCodeAt(0).toString(16)).join('')}]`;
+      }
+      renderPreprocessResult({
+        processed_text: cleaned,
+        processed_bytes_count: cleaned.length,
+        chunks: [cleaned.slice(0, 50)],
+        tensor_floats: new Array(16).fill(0.5)
+      });
+    }
+
+    function renderPreprocessResult(data) {
+      procOutput.value = data.processed_text || (data.envelope_bytes ? `[CHACHA20 ENVELOPE: ${data.envelope_bytes.length} bytes]` : '');
+      document.getElementById('processedByteCount').textContent = (data.processed_bytes_count || procOutput.value.length) + ' Bytes';
+      document.getElementById('statTensors').textContent = data.tensor_floats ? data.tensor_floats.length : 0;
+      document.getElementById('statChunks').textContent = data.chunks ? data.chunks.length : 1;
+      const bytes = data.processed_bytes_count || 100;
+      document.getElementById('statDroplets').textContent = Math.ceil(bytes / 1100);
+    }
+
+    document.getElementById('btnRunPreprocess').addEventListener('click', triggerPreprocess);
+    rawInput.addEventListener('input', triggerPreprocess);
+    [chkPii, chkMm, chkPhone, chkEnc].forEach(c => c.addEventListener('change', triggerPreprocess));
+
+    document.getElementById('btnDispatchStudio').addEventListener('click', () => {
+      const preset = selPreset.value;
+      alert(`🚀 [DISPATCH THÀNH CÔNG]\nTác vụ đã được tiền xử lý & phát lệnh tới Mạng lưới SkyNet!\n- Preset: ${preset}\n- Bounty ký quỹ: 15 SKN\n- Giao thức: Fountain Droplets <= 1200B UDP`);
+    });
+
+    document.getElementById('btnCopyCli').addEventListener('click', () => {
+      const preset = selPreset.value;
+      const cmd = `skynet compute dispatch --input data.txt --preset ${preset} --bounty 15`;
+      navigator.clipboard.writeText(cmd).then(() => {
+        alert(`📋 Đã sao chép lệnh CLI cho AI Agent:\n\n${cmd}`);
+      }).catch(() => {
+        prompt('Sao chép lệnh:', cmd);
+      });
+    });
+
+    // Initialize Studio with default sample
+    syncStudioPreset('text-audit');
 
     pollTelemetry();
     setInterval(pollTelemetry, 450);

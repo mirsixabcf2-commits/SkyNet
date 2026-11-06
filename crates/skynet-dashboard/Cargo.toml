@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lints]
+workspace = true
+
 [features]
 default = []
 metal = ["skynet-agent/metal"]
@@ -20,4 +23,5 @@ skynet-cell.workspace = true
 skynet-dna.workspace = true
 skynet-ledger.workspace = true
 skynet-wire.workspace = true
+skynet-node.workspace = true
 tokio.workspace = true

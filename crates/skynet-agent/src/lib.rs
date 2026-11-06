@@ -18,10 +18,16 @@ use skynet_ledger::{
 };
 use skynet_wire::{
     FountainDecoder, FountainEncoder, ImpulseBody, ImpulsePacket, PeerContact, SynapticPeerTable,
-    WireError, MAX_UDP_DATAGRAM_BYTES,
+    WireError, DEFAULT_PORT, MAX_UDP_DATAGRAM_BYTES,
 };
 use thiserror::Error;
 use tokio::net::UdpSocket;
+
+pub mod compute_flow;
+pub use compute_flow::{ComputeFlowCoordinator, ComputeFlowError};
+
+pub mod auditor_flow;
+pub use auditor_flow::AuditorCoordinator;
 
 #[derive(Debug, Error)]
 pub enum AgentError {
@@ -31,6 +37,8 @@ pub enum AgentError {
     Ledger(#[from] LedgerError),
     #[error("wire error: {0}")]
     Wire(#[from] WireError),
+    #[error("compute flow error: {0}")]
+    Compute(#[from] ComputeFlowError),
     #[error("UDP I/O error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -193,6 +201,8 @@ pub struct OrganismStats {
     pub udp_dropped_simulated: u64,
 }
 
+pub type PendingSnowballQuery = (u64, std::collections::HashSet<[u8; 32]>, Vec<UtxoId>);
+
 /// 1 Node = 1 Multicellular AI `AgentNode` living on a CPU/GPU device and speaking lossy UDP.
 pub struct AgentNode {
     pub name: String,
@@ -224,6 +234,21 @@ pub struct AgentNode {
     pub udp_dropped_simulated: u64,
     fountain_decoders: HashMap<[u8; 32], FountainDecoder>,
     pub imported_plasmids: usize,
+    pub pending_snowball_queries: HashMap<u64, PendingSnowballQuery>,
+    pub cluster_mitosis_votes: HashMap<(u32, u8), std::collections::HashSet<[u8; 32]>>,
+}
+
+/// Parameters for restoring a persisted multicellular organism.
+#[derive(Debug)]
+pub struct RestoreOrganismOptions {
+    pub name: String,
+    pub seed: u64,
+    pub signing_key: SigningKey,
+    pub tier: HardwareTier,
+    pub ledger: UtxoDagLedger,
+    pub cells: Vec<MicroCell>,
+    pub bank: AgentMetabolicBank,
+    pub snowball_params: SnowballParams,
 }
 
 impl AgentNode {
@@ -323,6 +348,57 @@ impl AgentNode {
             udp_dropped_simulated: 0,
             fountain_decoders: HashMap::new(),
             imported_plasmids: 0,
+            pending_snowball_queries: HashMap::new(),
+            cluster_mitosis_votes: HashMap::new(),
+        };
+        node.verify_internal_skn_conservation()?;
+        Ok(node)
+    }
+
+    /// Restores a previously persisted `AgentNode` from saved biological cells and bank state.
+    pub fn restore_organism(opts: RestoreOrganismOptions) -> Result<Self, AgentError> {
+        let pubkey = opts.signing_key.verifying_key().to_bytes();
+        let profile = HardwareProfile::for_tier(opts.tier);
+        let device = HardwareProfile::select_compute_device();
+        let utreexo_roots = opts.ledger.build_utreexo_forest().roots;
+        let (max_intra, max_k) = match opts.tier {
+            HardwareTier::TinyPeripheral => (10, 2),
+            HardwareTier::StandardNode => (24, 3),
+            HardwareTier::ColossalOrganism => (48, 4),
+        };
+        let peer_table = SynapticPeerTable::new(&pubkey, 0, 0, max_intra, max_k);
+        let max_id = opts.cells.iter().map(|c| c.cell_id).max().unwrap_or(0);
+
+        let node = Self {
+            name: opts.name,
+            signing_key: opts.signing_key,
+            pubkey,
+            ownership_cert: None,
+            profile,
+            device,
+            cluster_prefix: 0,
+            prefix_len: 0,
+            epoch: 0,
+            pulse_seq: 0,
+            cells: opts.cells,
+            bank: opts.bank,
+            ledger: opts.ledger,
+            utreexo_roots,
+            voucher_channels: HashMap::new(),
+            total_voucher_nano_earned: NanoSkn::ZERO,
+            peer_table,
+            snowball: SnowballEngine::new(opts.snowball_params),
+            next_cell_id: max_id + 1,
+            rng: ChaCha8Rng::seed_from_u64(opts.seed ^ 0xA5A5_5A5A),
+            total_mitosis_events: 0,
+            total_apoptosis_events: 0,
+            udp_sent: 0,
+            udp_received: 0,
+            udp_dropped_simulated: 0,
+            fountain_decoders: HashMap::new(),
+            imported_plasmids: 0,
+            pending_snowball_queries: HashMap::new(),
+            cluster_mitosis_votes: HashMap::new(),
         };
         node.verify_internal_skn_conservation()?;
         Ok(node)
@@ -589,6 +665,11 @@ impl AgentNode {
         Ok(packets)
     }
 
+    /// Binds a standalone UDP socket on SkyNet's default port (`0.0.0.0:8888`).
+    pub async fn bind_default_udp() -> Result<UdpSocket, AgentError> {
+        Ok(UdpSocket::bind(("0.0.0.0", DEFAULT_PORT)).await?)
+    }
+
     /// Sends an `ImpulsePacket` over a real `UdpSocket`, simulating ambient lossy network drops.
     pub async fn send_lossy_udp(
         &mut self,
@@ -702,9 +783,18 @@ impl AgentNode {
                 )?;
                 Ok(Some(reply))
             }
-            ImpulseBody::SnowballReply { votes, .. } => {
-                for (u, chosen_tx) in votes {
-                    self.snowball.record_incoming_vote(u, chosen_tx);
+            ImpulseBody::SnowballReply { query_id, votes } => {
+                // Mitigates SEC-01: Drop unsolicited or replay Snowball replies
+                if let Some((_, queried_peers, contested)) =
+                    self.pending_snowball_queries.get_mut(&query_id)
+                {
+                    if queried_peers.remove(&pkt.sender_pubkey) {
+                        for (u, chosen_tx) in votes {
+                            if contested.contains(&u) {
+                                self.snowball.record_incoming_vote(u, chosen_tx);
+                            }
+                        }
+                    }
                 }
                 Ok(None)
             }
@@ -713,12 +803,34 @@ impl AgentNode {
                 parent_prefix_len,
                 ..
             } => {
+                // Mitigates SEC-09: Cluster mitosis requires quorum consensus from known intra-cluster peers
                 if self.cluster_prefix == parent_prefix && self.prefix_len == parent_prefix_len {
-                    self.split_cluster_prefix();
+                    let is_known = self
+                        .peer_table
+                        .intra_cluster_peers
+                        .iter()
+                        .any(|p| p.pubkey == pkt.sender_pubkey);
+                    if is_known {
+                        let votes = self
+                            .cluster_mitosis_votes
+                            .entry((parent_prefix, parent_prefix_len))
+                            .or_default();
+                        votes.insert(pkt.sender_pubkey);
+                        if votes.len() >= 2 || self.cells.len() >= self.profile.max_cells * 9 / 10 {
+                            self.split_cluster_prefix();
+                            self.cluster_mitosis_votes.remove(&(parent_prefix, parent_prefix_len));
+                        }
+                    }
                 }
                 Ok(None)
             }
             ImpulseBody::FountainDroplet(droplet) => {
+                // Mitigates SEC-11: Bound concurrent in-flight fountain decoders to 32 to prevent OOM
+                if !self.fountain_decoders.contains_key(&droplet.object_hash)
+                    && self.fountain_decoders.len() >= 32
+                {
+                    return Ok(None);
+                }
                 let hash = droplet.object_hash;
                 let dec = self
                     .fountain_decoders
@@ -728,15 +840,16 @@ impl AgentNode {
                     self.fountain_decoders.remove(&hash);
                     if let Ok(donor_dna) = bincode::deserialize::<CellDna>(&bytes) {
                         if donor_dna.verify_integrity().is_ok() {
-                            if let Some(weakest) = self.cells.iter_mut().min_by(|a, b| {
-                                a.cumulative_fitness
-                                    .partial_cmp(&b.cumulative_fitness)
-                                    .unwrap_or(std::cmp::Ordering::Equal)
+                            // Mitigates SEC-08: Protect immune (Epidermal) and vital (Visceral) cells from unverified plasmids
+                            if let Some(candidate) = self.cells.iter_mut().find(|c| {
+                                c.role() != CellRole::Epidermal
+                                    && c.role() != CellRole::Visceral
+                                    && c.health < 0.95
                             }) {
                                 if let Ok(crossed) =
-                                    weakest.dna.horizontal_crossover(&donor_dna, &mut self.rng)
+                                    candidate.dna.horizontal_crossover(&donor_dna, &mut self.rng)
                                 {
-                                    weakest.dna = crossed;
+                                    candidate.dna = crossed;
                                     self.imported_plasmids += 1;
                                 }
                             }
@@ -745,12 +858,33 @@ impl AgentNode {
                 }
                 Ok(None)
             }
+            ImpulseBody::Compute(_msg) => {
+                // Handled via ComputeFlowCoordinator
+                Ok(None)
+            }
         }
     }
 
+    /// Registers an active outgoing Snowball query for a set of sampled peers.
+    pub fn initiate_snowball_query(
+        &mut self,
+        query_id: u64,
+        queried_peers: std::collections::HashSet<[u8; 32]>,
+        contested_utxos: Vec<UtxoId>,
+    ) {
+        self.pending_snowball_queries.insert(
+            query_id,
+            (self.epoch, queried_peers, contested_utxos),
+        );
+    }
+
     /// Closes the current Snowball UDP sampling window, commits any newly finalized UTXOs,
-    /// and synchronizes internal cellular `BloodPool` with on-chain `SKN`.
+    /// decays synaptic routing table weights, and synchronizes internal cellular `BloodPool` with on-chain `SKN`.
     pub fn finalize_snowball_pulse(&mut self) -> Result<Vec<[u8; 32]>, AgentError> {
+        self.peer_table.decay_synapses();
+        self.pending_snowball_queries
+            .retain(|_, (epoch, _, _)| self.epoch.saturating_sub(*epoch) <= 5);
+
         let winners = self.snowball.close_pulse_window();
         for tx_hash in &winners {
             if self.ledger.pending_tx(tx_hash).is_some() {
@@ -845,5 +979,127 @@ mod tests {
         assert!(giant.total_apoptosis_events > 0);
         giant.verify_internal_skn_conservation().unwrap();
         tiny.verify_internal_skn_conservation().unwrap();
+    }
+
+    #[test]
+    fn test_unsolicited_snowball_reply_is_dropped() {
+        let mut rng = ChaCha8Rng::seed_from_u64(1234);
+        let node_key = SigningKey::generate(&mut rng);
+        let attacker_key = SigningKey::generate(&mut rng);
+        let alloc = NanoSkn::from_skn(100).unwrap();
+
+        let (ledger, _) = UtxoDagLedger::from_genesis(vec![
+            TxOutput::direct(node_key.verifying_key().to_bytes(), alloc),
+        ])
+        .unwrap();
+
+        let mut node = AgentNode::from_signing_key(
+            "Node",
+            1,
+            node_key,
+            HardwareTier::StandardNode,
+            ledger,
+            SnowballParams::default(),
+        )
+        .unwrap();
+
+        let fake_utxo = UtxoId {
+            tx_hash: [1u8; 32],
+            vout: 0,
+        };
+        let fake_vote = [2u8; 32];
+
+        // Attacker sends an unsolicited SnowballReply with unqueried query_id = 999
+        let unsolicited_reply = ImpulsePacket::new_signed(
+            &attacker_key,
+            node.cluster_prefix,
+            node.prefix_len,
+            2,
+            node.epoch,
+            1,
+            ImpulseBody::SnowballReply {
+                query_id: 999,
+                votes: vec![(fake_utxo, fake_vote)],
+            },
+        )
+        .unwrap();
+
+        let raw = unsolicited_reply.encode_datagram().unwrap();
+        node.handle_incoming_datagram(&raw).unwrap();
+
+        // Must NOT have recorded the unsolicited vote!
+        assert!(node.snowball.vote_for(&fake_utxo).is_none());
+    }
+
+    #[test]
+    fn test_cluster_mitosis_requires_peer_quorum() {
+        let mut rng = ChaCha8Rng::seed_from_u64(5678);
+        let node_key = SigningKey::generate(&mut rng);
+        let stranger_key = SigningKey::generate(&mut rng);
+        let peer_key = SigningKey::generate(&mut rng);
+        let alloc = NanoSkn::from_skn(100).unwrap();
+
+        let (ledger, _) = UtxoDagLedger::from_genesis(vec![
+            TxOutput::direct(node_key.verifying_key().to_bytes(), alloc),
+        ])
+        .unwrap();
+
+        let mut node = AgentNode::from_signing_key(
+            "Node",
+            1,
+            node_key,
+            HardwareTier::StandardNode,
+            ledger,
+            SnowballParams::default(),
+        )
+        .unwrap();
+
+        let initial_prefix_len = node.prefix_len;
+
+        // Stranger tries to force mitosis without being a known peer
+        let stranger_pkt = ImpulsePacket::new_signed(
+            &stranger_key,
+            node.cluster_prefix,
+            node.prefix_len,
+            2,
+            node.epoch,
+            1,
+            ImpulseBody::ClusterMitosis {
+                parent_prefix: node.cluster_prefix,
+                parent_prefix_len: node.prefix_len,
+                epoch: node.epoch,
+            },
+        )
+        .unwrap();
+        node.handle_incoming_datagram(&stranger_pkt.encode_datagram().unwrap()).unwrap();
+        assert_eq!(node.prefix_len, initial_prefix_len, "stranger cannot force mitosis");
+
+        // Register peer as an active intra-cluster peer
+        node.peer_table.observe_peer(PeerContact {
+            pubkey: peer_key.verifying_key().to_bytes(),
+            addr: "10.0.0.1:8888".parse().unwrap(),
+            cluster_prefix: node.cluster_prefix,
+            prefix_len: node.prefix_len,
+            bonded_skn_whole: 100,
+            synaptic_score: 200,
+        });
+
+        // 1 peer vote is recorded but still insufficient for quorum (< 2)
+        let peer_pkt1 = ImpulsePacket::new_signed(
+            &peer_key,
+            node.cluster_prefix,
+            node.prefix_len,
+            2,
+            node.epoch,
+            1,
+            ImpulseBody::ClusterMitosis {
+                parent_prefix: node.cluster_prefix,
+                parent_prefix_len: node.prefix_len,
+                epoch: node.epoch,
+            },
+        )
+        .unwrap();
+        node.handle_incoming_datagram(&peer_pkt1.encode_datagram().unwrap()).unwrap();
+        assert_eq!(node.prefix_len, initial_prefix_len, "single peer cannot trigger mitosis without quorum");
     }
 }

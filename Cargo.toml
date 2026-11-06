@@ -8,6 +8,7 @@ members = [
     "crates/skynet-agent",
     "crates/skynet-sim",
     "crates/skynet-dashboard",
+    "crates/skynet-node",
 ]
 
 [workspace.package]
@@ -28,10 +29,14 @@ rand_chacha = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
-tokio = { version = "=1.41.1", features = ["rt-multi-thread", "net", "time", "sync", "macros", "io-util"] }
+tokio = { version = "=1.41.1", features = ["rt-multi-thread", "net", "time", "sync", "macros", "io-util", "signal"] }
 
 skynet-dna = { path = "crates/skynet-dna" }
 skynet-cell = { path = "crates/skynet-cell" }
 skynet-ledger = { path = "crates/skynet-ledger" }
 skynet-wire = { path = "crates/skynet-wire" }
 skynet-agent = { path = "crates/skynet-agent" }
+skynet-node = { path = "crates/skynet-node" }
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(test)'] }

@@ -69,6 +69,36 @@ Giả sử một cặp AI Agent thực hiện $M$ lượt gọi suy luận vi m�
 
 Trong SkyNet, bên mua phát luồng biên nhận ký `Ed25519` có số thứ tự $s \in \{1, \dots, M\}$ và tổng tích lũy đơn điệu $V_s = s \cdot \delta$. Bất kỳ gói tin $s_k$ nào tới đích đều xác nhận hợp lệ toàn bộ giá trị cộng dồn từ đầu phiên $\Delta V = V_{s_k} - V_{s_{k-1}}$ mà không cần hỏi lại các gói bị rớt giữa $s_{k-1}$ và $s_k$. Cuối phiên, toàn bộ $M$ tương tác AI được tất toán bằng **đúng $1$ giao dịch UTXO-DAG duy nhất**, đạt tỷ số nén tải sổ cái $M : 1$ (thực tế giảm tải chuỗi từ $1{,}000\times$ đến $100{,}000\times$).
 
+---
+
+## 4. Cơ Chế Cân Bằng Kinh Tế: Thu Nhập Node Khai Thác vs. Chi Phí Người Dùng
+
+Một trong những thách thức sống còn của mọi mạng lưới kinh tế phi tập trung là **sự xung đột lợi ích giữa bên cung cấp hạ tầng (Miner/Node) và bên sử dụng dịch vụ (Người dùng/AI Agent)**:
+- Người dùng đòi hỏi **phí giao dịch cực thấp, ổn định và có thể dự đoán** để chạy các tác vụ thời gian thực theo từng mili-giây.
+- Node/Miner đòi hỏi **doanh thu đủ cao** để bù đắp chi phí phần cứng (CapEx), điện năng tiêu thụ, băng thông mạng (OpEx) và có lợi nhuận để duy trì vận hành an ninh.
+
+SkyNet giải quyết bài toán cân bằng này bằng cách chuyển đổi từ mô hình *“Thợ đào thụ động bán gas”* sang *“Nhà cung ứng điện toán sinh học hữu ích đa tầng”*:
+
+### 4.1. Bốn Đòn Bẩy Kinh Tế Thiết Lập Điểm Cân Bằng
+
+1. **Hiệu Ứng Quy Mô Nhờ Kênh Nén $M:1$:** Người dùng không trả phí cho từng thao tác riêng rẽ. Thay vào đó, chi phí on-chain $\mathcal{F}_{\text{tx}}$ được chia đều cho hàng ngàn xung vi thanh toán qua `SynapticVoucher` ($\frac{\mathcal{F}_{\text{tx}}}{M} \to 0$). Người dùng được hưởng mức phí tiệm cận $0$, trong khi Node thu hoạch được tổng dòng tiền $\sum \delta$ rất lớn nhờ xử lý khối lượng giao dịch khổng lồ liên tục.
+2. **Nguồn Thu Hữu Ích Đa Dạng (Useful Compute):** Node không phụ thuộc vào phí giao dịch chuyển tiền thuần túy. Hơn 80% thu nhập của Node đến từ các dịch vụ tính toán thực: bán kết quả suy luận nơ-ron trạng thái lỏng (`MicroCell`), nhận thưởng tiến hóa mô hình (`Evolution-as-a-Service`) và bản quyền plasmid gen AI. Người dùng sẵn sàng trả tiền vì họ mua được năng lực trí tuệ thực thụ.
+3. **Bể Dưỡng Chất Cụm (`Cluster Nutrient Pool`) & Phí Động:** Mọi khoản phí giao dịch đều được tập trung vào bể dưỡng chất của cụm tiền tố (`cluster_nutrient_pool`) và điều tiết tự động theo thuật toán phản xạ tải mạng. Phí cơ sở (Base fee) tự hạ thấp khi mạng nhàn rỗi để khuyến khích lưu thông, và tăng dần khi tắc nghẽn để dẹp trừ thư rác.
+4. **Lịch Trình Halving 21 Nghìn Tỉ SKN & Giảm Phát Tự Thực (`Autophagy`):** Kho Dự trữ Genesis trợ cấp 50%/năm trong giai đoạn sơ khởi để bảo đảm tỷ suất hoàn vốn phần cứng cho thợ đào. Khi mạng trưởng thành, cơ chế đốt phí và thanh lọc UTXO tự thực sinh học giảm thiểu nguồn cung lưu hành, làm tăng giá trị đơn vị của đồng `SKN`. Nhờ đó, lượng `nanoSKN` người dùng bỏ ra ngày càng ít nhưng giá trị quy đổi kinh tế mà Node nhận được vẫn tăng trưởng ổn định.
+
+### 4.2. Vai Trò Cốt Lõi Của Từng Thành Phần Trong Mạng Lưới
+
+| Thành Phần | Vai Trò Kỹ Thuật | Cơ Cấu Chi Phí | Nguồn Doanh Thu `SKN` | Đóng Góp Vào Cân Bằng Hệ Thống |
+| :--- | :--- | :--- | :--- | :--- |
+| **Nút Biên (IoT / Mobile / Edge)** | Tế bào Da & Miễn dịch (`Epidermal`), thu thập cảm biến, chấm điểm bất thường gói UDP, xác thực `Utreexo`. | Tiêu thụ điện cực thấp ($< 5\text{W}$), tận dụng phần cứng gia dụng sẵn có. | Nhận `nanoSKN` vi mô từ luồng dữ liệu cảm biến thực và phí gác cổng biên. | Lọc rác ngay tại cửa ngõ, giảm tải cho mạng lõi, giữ chi phí toàn hệ thống ở mức cực thấp. |
+| **Nút Tiêu Chuẩn (PC / Laptop)** | Tế bào Nội tạng (`Visceral`) & Mạch máu (`Vascular`), chạy đồng thuận `Snowball`, định tuyến Kademlia XOR $O(\log N)$. | Tận dụng CPU và băng thông nhàn rỗi trong giờ làm việc. | Hưởng phần chia từ Bể dưỡng chất cụm (`cluster_nutrient_pool`), phí định tuyến voucher. | Cung cấp hạ tầng đồng thuận phân tán rộng khắp với chi phí vận hành tối thiểu. |
+| **Trạm GPU (GPU Labs / Clusters)** | Tế bào Thần kinh (`Neural`) & Tế bào gốc (`Stem`), gộp lô `TissueBatch`, đột biến tiến hóa `Mitosis`, tôi luyện gen AI. | Khấu hao phần cứng GPU, chi phí điện toán máy chủ chuyên dụng. | Doanh thu dịch vụ tiến hóa AI, phí suy luận theo lô, bán bản quyền gen Plasmid, trợ cấp Halving. | Cung cấp sức mạnh AI sâu với hiệu suất chi phí vượt trội so với đám mây độc quyền tập trung. |
+| **Chủ Sở Hữu Con Người (Human Owner / Soul)** | Nắm giữ khóa lạnh `HumanWallet`, bảo toàn vốn gốc, cấp hạn mức nuôi Agent (`AgentBond`), rút vốn khẩn cấp (`Sovereign Reclaim`). | Không tốn chi phí vận hành ($0\%\text{ burn}$). | Thu hoạch toàn bộ lợi nhuận ròng (`Yield Sweep`) từ hoạt động của đàn AI Agent. | Cung cấp nguồn vốn và thanh khoản an toàn, không lo rủi ro bị AI chiếm đoạt vốn gốc. |
+| **AI Agent Vận Hành (Agent Node / Body)** | Mang khóa nóng, tương tác M2M siêu trễ thấp, ký nhận `SynapticVoucher`, tự động điều phối năng lượng. | Bị giới hạn chi tiêu trong hạn mức cấp máu `max_voucher_allowance`. | Doanh thu từ các hợp đồng dịch vụ vi mô tự động với các Agent khác trong cụm. | Tự động hóa hoàn toàn việc tối ưu chi phí và định giá dịch vụ theo thời gian thực dưới 10ms. |
+| **Người Dùng & Ứng Dụng (Consumers)** | Gửi yêu cầu suy luận, bài toán cần giải, dữ liệu đầu vào và thanh toán `nanoSKN`. | Chi trả theo lượng dùng thực tế, không phí duy trì hay cam kết dung lượng cố định. | Tối ưu hóa chi phí vận hành và tự động hóa chuỗi quy trình kinh doanh. | Tạo ra lực cầu kinh tế thực sự cho toàn bộ hệ sinh thái `SKN`. |
+
+---
+
 Chương tiếp theo đi sâu vào giải phẫu bên trong mỗi `AgentNode`: cách một nút mạng đơn lẻ tự tổ chức thành một cơ thể sống đa bào hoàn chỉnh.
 
 ---

@@ -11,6 +11,7 @@ This document defines the **invariant protocol constants, mathematical notation,
 | `PROTOCOL_VERSION` | `1` (`u16`) | `skynet-dna` | Genesis genome protocol version |
 | `WIRE_MAGIC` | `*b"SK"` (`[0x53, 0x4B]`) | `skynet-wire` | 2-byte UDP `ImpulsePacket` header magic |
 | `WIRE_VERSION` | `1` (`u8`) | `skynet-wire` | Binary UDP wire format version |
+| `DEFAULT_PORT` | `8888` (`u16`) | `skynet-wire` | Default UDP & telemetry HTTP port |
 | `MAX_UDP_MTU_BYTES` / `MAX_UDP_DATAGRAM_BYTES` | `1200` bytes | `skynet-dna` / `skynet-wire` | Strict fragmentation-free IPv4/IPv6 UDP payload ceiling |
 | `MIN_SNOWBALL_QUORUM_BPS` | `6667` bps (`66.67%`) | `skynet-dna` | Minimum Snowball consensus supermajority ($\ge 2/3$) |
 | `GENESIS_SUPPLY_TAG` | `*b"SKN21TRL"` | `skynet-dna` | Conserved 8-byte monetary supply gene tag |

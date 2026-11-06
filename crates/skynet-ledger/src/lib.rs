@@ -25,6 +25,21 @@ pub const MIN_TX_NANO_SKN: u128 = 1;
 /// Default number of 1-minute epochs per calendar year (`365 * 24 * 60 = 525,600`).
 pub const DEFAULT_EPOCHS_PER_YEAR: u64 = 525_600;
 
+pub mod compute_escrow_types;
+pub mod compute_escrow_settle;
+pub mod compute_escrow;
+pub use compute_escrow::ComputeEscrowVault;
+pub use compute_escrow_types::{
+    AuditorDeposit, ComputeEscrowRecord, EscrowError, EscrowPayoutBreakdown, EscrowSplitConfig,
+    EscrowStatus, LockTaskParams, TaskId as ComputeTaskId,
+};
+
+pub mod hwid_airdrop;
+pub use hwid_airdrop::{
+    HwidClaimRecord, HwidClaimRequest, HwidDigest, MarketingBootstrapVault, MarketingError,
+    ProofDigest,
+};
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum LedgerError {
     #[error("nanoSKN arithmetic overflow")]
@@ -291,6 +306,19 @@ impl AgentOwnershipCertificate {
     }
 }
 
+/// Parameters for funding an AI Agent from a Human's cold UTXO.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentFundingParams {
+    pub cold_utxo_id: UtxoId,
+    pub cold_utxo_amount: NanoSkn,
+    pub agent_pubkey: [u8; 32],
+    pub bond_amount: NanoSkn,
+    pub max_voucher_allowance: NanoSkn,
+    pub fee: NanoSkn,
+    pub dag_parents: Vec<[u8; 32]>,
+    pub nonce: u64,
+}
+
 /// Deterministic Hierarchical Human Wallet (`BLAKE3` KDF):
 /// One human master seed manages cold personal SKN vaults AND any number of AI Agent Nodes,
 /// never exposing the human's master private key on online Agent hardware.
@@ -356,33 +384,26 @@ impl HumanWallet {
     /// Funds a new or existing AI Agent from the Human's cold UTXO while keeping sovereign ownership.
     pub fn create_agent_funding_tx(
         &self,
-        cold_utxo_id: UtxoId,
-        cold_utxo_amount: NanoSkn,
-        agent_pubkey: [u8; 32],
-        bond_amount: NanoSkn,
-        max_voucher_allowance: NanoSkn,
-        fee: NanoSkn,
-        dag_parents: Vec<[u8; 32]>,
-        nonce: u64,
+        params: AgentFundingParams,
     ) -> Result<SknTransaction, LedgerError> {
-        let total_out = bond_amount.checked_add(fee)?;
-        let change = cold_utxo_amount.checked_sub(total_out)?;
+        let total_out = params.bond_amount.checked_add(params.fee)?;
+        let change = params.cold_utxo_amount.checked_sub(total_out)?;
         let mut outputs = vec![TxOutput::agent_bond(
             self.human_pubkey(),
-            agent_pubkey,
-            bond_amount,
-            max_voucher_allowance,
+            params.agent_pubkey,
+            params.bond_amount,
+            params.max_voucher_allowance,
         )];
         if change.0 > 0 {
             outputs.push(TxOutput::direct(self.human_pubkey(), change));
         }
         Ok(SknTransaction::new_signed(
             &self.master_signing_key,
-            vec![cold_utxo_id],
+            vec![params.cold_utxo_id],
             outputs,
-            fee,
-            dag_parents,
-            nonce,
+            params.fee,
+            params.dag_parents,
+            params.nonce,
         ))
     }
 
@@ -573,6 +594,58 @@ impl VoucherChannelTracker {
             nonce,
         ))
     }
+
+    /// Unilateral Payee Settlement: The Payee builds and signs a settlement transaction,
+    /// proving their authorization via the Payer's cryptographically signed `SynapticVoucher`.
+    /// This prevents malicious or offline Payers from defaulting or holding earned funds hostage!
+    pub fn build_unilateral_settlement_tx(
+        &self,
+        payee_key: &SigningKey,
+        bond_output: &TxOutput,
+        fee: NanoSkn,
+        dag_parents: Vec<[u8; 32]>,
+        nonce: u64,
+    ) -> Result<(SknTransaction, SynapticVoucher), LedgerError> {
+        let voucher = self
+            .highest_voucher
+            .as_ref()
+            .ok_or(LedgerError::EmptyInputsOrOutputs)?;
+        let CustodyPolicy::AgentBond {
+            human_owner,
+            max_voucher_allowance,
+        } = bond_output.policy
+        else {
+            return Err(LedgerError::UnauthorizedSpend);
+        };
+        voucher.verify(max_voucher_allowance)?;
+
+        let deducted = voucher.cumulative_amount.checked_add(fee)?;
+        let refund_to_human_bond = bond_output.amount.checked_sub(deducted)?;
+        let new_remaining_allowance = max_voucher_allowance.checked_sub(voucher.cumulative_amount)?;
+
+        let mut outputs = vec![TxOutput::direct(
+            voucher.payee_pubkey,
+            voucher.cumulative_amount,
+        )];
+        if refund_to_human_bond.0 > 0 {
+            outputs.push(TxOutput::agent_bond(
+                human_owner,
+                bond_output.owner_pubkey,
+                refund_to_human_bond,
+                new_remaining_allowance,
+            ));
+        }
+
+        let tx = SknTransaction::new_signed(
+            payee_key,
+            vec![self.bond_utxo],
+            outputs,
+            fee,
+            dag_parents,
+            nonce,
+        );
+        Ok((tx, voucher.clone()))
+    }
 }
 
 /// Compact Merkle Inclusion Proof (`~64 - 384 bytes`) allowing `~1 KB` RAM peripheral nodes
@@ -738,6 +811,7 @@ impl UtreexoForestBuilder {
                         let sib_idx = cur ^ 1;
                         siblings.push(level[sib_idx]);
                         let mut next_level = Vec::with_capacity(level.len() / 2);
+                        #[allow(clippy::chunks_exact_to_as_chunks)]
                         for pair in level.chunks_exact(2) {
                             next_level.push(StatelessUtreexoRoots::hash_parent(&pair[0], &pair[1]));
                         }
@@ -947,6 +1021,24 @@ impl UtxoDagLedger {
         self.finalized_tips.iter().copied().collect()
     }
 
+    pub fn all_utxos(&self) -> Vec<(UtxoId, TxOutput)> {
+        self.utxos.iter().map(|(k, v)| (*k, v.clone())).collect()
+    }
+
+    pub fn from_raw_state(
+        utxos: Vec<(UtxoId, TxOutput)>,
+        finalized_tips: Vec<[u8; 32]>,
+        cluster_nutrient_pool: NanoSkn,
+    ) -> Self {
+        Self {
+            utxos: utxos.into_iter().collect(),
+            pending_txs: HashMap::new(),
+            conflict_sets: HashMap::new(),
+            finalized_tips: finalized_tips.into_iter().collect(),
+            cluster_nutrient_pool,
+        }
+    }
+
     pub fn conflict_candidates(&self, utxo: &UtxoId) -> Option<&BTreeSet<[u8; 32]>> {
         self.conflict_sets.get(utxo)
     }
@@ -1058,6 +1150,80 @@ impl UtxoDagLedger {
             entry.insert(tx_hash);
         }
 
+        self.pending_txs.insert(tx_hash, tx);
+        Ok((tx_hash, conflicts.into_iter().collect()))
+    }
+
+    /// Admits a unilateral payee settlement transaction verified by a valid `SynapticVoucher`.
+    pub fn admit_unilateral_voucher_settlement(
+        &mut self,
+        tx: SknTransaction,
+        voucher: &SynapticVoucher,
+    ) -> Result<([u8; 32], Vec<[u8; 32]>), LedgerError> {
+        if tx.inputs.len() != 1 || tx.outputs.is_empty() {
+            return Err(LedgerError::EmptyInputsOrOutputs);
+        }
+        tx.verify_signature()?;
+
+        let bond_utxo_id = tx.inputs[0];
+        if bond_utxo_id != voucher.bond_utxo {
+            return Err(LedgerError::UnknownOrSpentUtxo);
+        }
+        let bond_out = self.utxos.get(&bond_utxo_id).ok_or(LedgerError::UnknownOrSpentUtxo)?;
+
+        let CustodyPolicy::AgentBond {
+            human_owner,
+            max_voucher_allowance,
+        } = bond_out.policy
+        else {
+            return Err(LedgerError::UnauthorizedSpend);
+        };
+
+        if bond_out.owner_pubkey != voucher.payer_agent_pubkey {
+            return Err(LedgerError::UnauthorizedSpend);
+        }
+        if tx.sender_pubkey != voucher.payee_pubkey {
+            return Err(LedgerError::UnauthorizedSpend);
+        }
+        voucher.verify(max_voucher_allowance)?;
+
+        if tx.outputs[0].owner_pubkey != voucher.payee_pubkey
+            || tx.outputs[0].amount != voucher.cumulative_amount
+        {
+            return Err(LedgerError::UnauthorizedSpend);
+        }
+
+        let deducted = voucher.cumulative_amount.checked_add(tx.fee)?;
+        let expected_refund = bond_out.amount.checked_sub(deducted)?;
+        if expected_refund.0 > 0
+            && (tx.outputs.len() < 2
+                || tx.outputs[1].human_beneficiary() != human_owner
+                || tx.outputs[1].amount != expected_refund)
+        {
+            return Err(LedgerError::HumanPrincipalDiversionBlocked);
+        }
+
+        let total_out = tx
+            .outputs
+            .iter()
+            .try_fold(NanoSkn::ZERO, |acc, o| acc.checked_add(o.amount))?;
+        if bond_out.amount != total_out.checked_add(tx.fee)? {
+            return Err(LedgerError::ConservationMismatch {
+                inputs: bond_out.amount.0,
+                outputs: total_out.0,
+                fee: tx.fee.0,
+            });
+        }
+
+        let tx_hash = tx.tx_hash();
+        let mut conflicts = BTreeSet::new();
+        let entry = self.conflict_sets.entry(bond_utxo_id).or_default();
+        for existing in entry.iter() {
+            if *existing != tx_hash {
+                conflicts.insert(*existing);
+            }
+        }
+        entry.insert(tx_hash);
         self.pending_txs.insert(tx_hash, tx);
         Ok((tx_hash, conflicts.into_iter().collect()))
     }
@@ -1274,19 +1440,19 @@ mod tests {
 
         // 1. Human funds AI Agent #0 while retaining sovereign ownership
         let fund_tx = human
-            .create_agent_funding_tx(
-                UtxoId {
+            .create_agent_funding_tx(AgentFundingParams {
+                cold_utxo_id: UtxoId {
                     tx_hash: gen_hash,
                     vout: 0,
                 },
-                initial_skn,
-                cert.agent_pubkey,
-                bond_skn,
-                allowance,
-                NanoSkn::ONE_NANO,
-                vec![gen_hash],
-                1,
-            )
+                cold_utxo_amount: initial_skn,
+                agent_pubkey: cert.agent_pubkey,
+                bond_amount: bond_skn,
+                max_voucher_allowance: allowance,
+                fee: NanoSkn::ONE_NANO,
+                dag_parents: vec![gen_hash],
+                nonce: 1,
+            })
             .unwrap();
         let (fund_hash, _) = ledger.admit_pending_tx(fund_tx).unwrap();
         let minted = ledger.finalize_tx(&fund_hash).unwrap();
@@ -1411,6 +1577,63 @@ mod tests {
         assert_eq!(
             ledger.balance_of(&payee_agent.verifying_key().to_bytes()),
             NanoSkn::from_nano(500)
+        );
+    }
+
+    #[test]
+    fn test_unilateral_voucher_settlement_without_payer_cooperation() {
+        let mut rng = ChaCha8Rng::seed_from_u64(8888);
+        let human = HumanWallet::from_master_seed([0x77u8; 32]);
+        let payer_agent = SigningKey::generate(&mut rng);
+        let payee_agent = SigningKey::generate(&mut rng);
+
+        let initial_bond = NanoSkn::from_nano(50_000);
+        let allowance = NanoSkn::from_nano(5_000);
+        let bond_out = TxOutput::agent_bond(
+            human.human_pubkey(),
+            payer_agent.verifying_key().to_bytes(),
+            initial_bond,
+            allowance,
+        );
+
+        let (mut ledger, gen_hash) = UtxoDagLedger::from_genesis(vec![bond_out.clone()]).unwrap();
+        let bond_utxo = UtxoId {
+            tx_hash: gen_hash,
+            vout: 0,
+        };
+
+        // Payer streams vouchers to payee
+        let mut tracker = VoucherChannelTracker::new(bond_utxo, allowance);
+        let voucher = SynapticVoucher::new_signed(
+            &payer_agent,
+            bond_utxo,
+            payee_agent.verifying_key().to_bytes(),
+            1,
+            NanoSkn::from_nano(2_500),
+        );
+        tracker.receive_udp_voucher(voucher).unwrap();
+
+        // Payer goes offline / disappears! Payee settles unilaterally on-chain!
+        let fee = NanoSkn::ONE_NANO;
+        let (unilateral_tx, highest_v) = tracker
+            .build_unilateral_settlement_tx(&payee_agent, &bond_out, fee, vec![gen_hash], 1)
+            .unwrap();
+
+        let (tx_hash, _) = ledger
+            .admit_unilateral_voucher_settlement(unilateral_tx, &highest_v)
+            .expect("unilateral settlement must be admitted with valid voucher");
+        let minted = ledger.finalize_tx(&tx_hash).unwrap();
+        assert_eq!(minted.len(), 2);
+
+        // Payee received exact earned 2500 nanoSKN
+        assert_eq!(
+            ledger.balance_of(&payee_agent.verifying_key().to_bytes()),
+            NanoSkn::from_nano(2_500)
+        );
+        // Human owner still owns remaining bonded principal
+        assert_eq!(
+            ledger.human_total_net_worth(&human.human_pubkey()),
+            initial_bond.checked_sub(NanoSkn::from_nano(2_500)).unwrap().checked_sub(fee).unwrap()
         );
     }
 }

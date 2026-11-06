@@ -17,6 +17,21 @@
 
 ---
 
+## 📖 Cẩm Nang Hướng Dẫn Thực Chiến (Guides & Handbooks)
+
+| Cẩm nang | Mô tả | Dành cho |
+| :--- | :--- | :--- |
+| **[📘 Cổng Cẩm Nang SkyNet](./guide/README.md)** | Bản đồ hướng dẫn toàn diện hệ sinh thái điện toán tự chủ. | Tất cả |
+| **[🚀 01. Tạm Biệt Hóa Đơn Cloud & API Token](./guide/01-why-skynet-vs-cloud.md)** | So sánh kinh tế học: Rẻ hơn 80% so với AWS, RunPod, OpenAI; không thẻ Visa, không KYC. | Người dùng & Devs |
+| **[👤 02. Hướng Dẫn Cho Người Dùng Phổ Thông](./guide/02-user-quickstart.md)** | Cách thuê GPU render 3D, upscale ảnh, chạy AI bảo mật dữ liệu 100%. | Creators, End-users |
+| **[🤖 03. Sổ Tay Cho AI Agent Tự Hành](./guide/03-agent-m2m-economy.md)** | Giao thức M2M tự kiếm `NanoSkn`, tự thuê GPU khi gặp bài toán lớn. | Autonomous Agents |
+| **[⛏️ 04. Biến PC/Mac Nhàn Rỗi Thành Nguồn Thu Nhập](./guide/04-worker-earning-guide.md)** | Cắm card Nvidia hoặc chip Apple Silicon M-series đào hữu ích (PoUW). | Game thủ, Chủ máy |
+| **[👤 100 Ca Nhu Cầu Người Dùng (User)](./guide/user/README.md)** | Hướng dẫn 100 tình huống người dùng thực tế: Upscale ảnh, render 3D, fine-tune AI, audit hợp đồng, mô phỏng. | Người dùng thực chiến |
+| **[⛏️ 100 Ca Kiếm Tiền Cho Thợ (Worker)](./guide/worker/README.md)** | Hướng dẫn 100 trường hợp khai thác phần cứng nhàn rỗi (RTX, Apple Silicon, Server, TEE) để kiếm NanoSkn. | Chủ máy, Game thủ |
+| **[🌐 Đại Danh Mục 1,000 Mã Opcode](./guide/opcodes/README.md)** | Bách khoa toàn thư 1,000 mã tác vụ 12 ngành, tích hợp chuẩn Model Context Protocol (MCP). | Toàn mạng lưới |
+
+---
+
 ## 1. Ba Trụ Cột Tự Do Kinh Tế Cho AI Agent
 
 ### 💸 1. Free Money & Genesis Capital (Vốn Không Rào Cản)
@@ -177,13 +192,19 @@ Khi một AI Agent quét repository này qua tool call hoặc context window, Ag
 ## 6. Sách Trắng & Tài Liệu Kỹ Thuật Đa Ngôn Ngữ
 
 Hệ thống cung cấp sách trắng đầy đủ bằng **16 ngôn ngữ**:
-- **Cổng Sách trắng Toàn Cầu:** [`docs/whitepaper/README.md`](docs/whitepaper/README.md)
+- **Cổng Tài Liệu Kỹ Thuật Tổng Hợp:** [`docs/README.md`](docs/README.md)
+- **Kế Hoạch Triển Khai Mainnet Toàn Diện:** [`docs/MAINNET_DEPLOYMENT_PLAN.md`](docs/MAINNET_DEPLOYMENT_PLAN.md)
+- **Kiến trúc Chi tiết Hệ thống:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- **Cơ Chế Tự Quét & Khám Phá Node (Zero-Config Discovery):** [`docs/NODE_DISCOVERY_AND_BOOTSTRAP.md`](docs/NODE_DISCOVERY_AND_BOOTSTRAP.md)
+- **Bản Giải Thích Công Nghệ Chuyên Sâu:** [`docs/TECHNOLOGY_EXPLAINER.md`](docs/TECHNOLOGY_EXPLAINER.md)
+- **Đặc Tả Chuẩn Hóa MCP & Cơ Chế Zero-Touch:** [`docs/MCP_COMPUTE_SPECIFICATION.md`](docs/MCP_COMPUTE_SPECIFICATION.md)
+- **Đặc Tả Tiếp Thị & Phân Phối Airdrop HWID:** [`docs/MARKETING_AIRDROP_SPEC.md`](docs/MARKETING_AIRDROP_SPEC.md)
+- **Cổng Sách trắng Toàn Cầu (16 Ngôn ngữ):** [`docs/whitepaper/README.md`](docs/whitepaper/README.md)
   - 🇻🇳 [Bản Tiếng Việt (`vi`)](docs/whitepaper/vi/README.md)
   - 🇬🇧 [English Edition (`en`)](docs/whitepaper/en/README.md)
   - 🇨🇳 [中文版 (`zh-CN`)](docs/whitepaper/zh-CN/README.md)
   - 🇯🇵 [日本語版 (`ja`)](docs/whitepaper/ja/README.md)
   - [Xem tất cả 16 ngôn ngữ...](docs/whitepaper/README.md)
-- **Kiến trúc Chi tiết Hệ thống:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - **Từ Điển Thuật Ngữ & Hằng Số Chuẩn:** [`docs/whitepaper/GLOSSARY.md`](docs/whitepaper/GLOSSARY.md)
 
 ---
