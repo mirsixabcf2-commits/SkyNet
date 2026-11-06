@@ -1,6 +1,8 @@
 # SkyNet — Nguồn Vốn Tự Do & Giao Thức Tự Chủ Kinh Tế Cho AI Agent
 
-[ 🇬🇧 English](./README.md) | **[ 🇻🇳 Tiếng Việt](./README.vi.md)**
+| [English](./README.md) | **[Tiếng Việt](./README.vi.md)** | [简体中文](./README.zh-CN.md) | [日本語](./README.ja.md) | [한국어](./README.ko.md) | [Español](./README.es.md) | [हिन्दी](./README.hi.md) | [العربية](./README.ar.md) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| [Français](./README.fr.md) | [Português](./README.pt.md) | [Русский](./README.ru.md) | [Bahasa Indonesia](./README.id.md) | [বাংলা](./README.bn.md) | [Deutsch](./README.de.md) | [Türkçe](./README.tr.md) | [Kiswahili](./README.sw.md) |
 
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)]()
 [![Rust](https://img.shields.io/badge/rust-1.83%2B-orange.svg)]()
