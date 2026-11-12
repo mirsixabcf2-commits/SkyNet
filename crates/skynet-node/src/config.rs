@@ -2,6 +2,7 @@
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
+
 use skynet_cell::HardwareTier;
 use thiserror::Error;
 
@@ -36,6 +37,7 @@ pub struct NodeConfig {
     pub tier: HardwareTier,
     pub seed_peers: Vec<SocketAddr>,
     pub owner_wallet: Option<[u8; 32]>,
+    pub genesis_path: Option<PathBuf>,
     pub tick_interval_ms: u64,
     pub auto_flush_interval_sec: u64,
 }
@@ -54,6 +56,7 @@ impl Default for NodeConfig {
             tier: HardwareTier::StandardNode,
             seed_peers: Vec::new(),
             owner_wallet: None,
+            genesis_path: None,
             tick_interval_ms: 1000,
             auto_flush_interval_sec: 30,
         }
@@ -83,15 +86,14 @@ impl NodeConfig {
         let mut data_dir = Self::default().data_dir;
         let mut i = 0;
         while i < args.len() {
-            if args[i] == "--data-dir" {
-                let val = args.get(i + 1).ok_or_else(|| {
-                    ConfigError::MissingValue("--data-dir".into())
-                })?;
-                data_dir = PathBuf::from(val);
-                i += 2;
-            } else {
+            if args[i] != "--data-dir" {
                 return Err(ConfigError::UnknownFlag(args[i].clone()));
             }
+            let val = args
+                .get(i + 1)
+                .ok_or_else(|| ConfigError::MissingValue("--data-dir".into()))?;
+            data_dir = PathBuf::from(val);
+            i += 2;
         }
         Ok(CliCommand::Status { data_dir })
     }
@@ -107,24 +109,17 @@ impl NodeConfig {
             "--port" | "-p" => {
                 cfg.port = val.parse().map_err(|_| ConfigError::InvalidPort(val.clone()))?;
             }
-            "--data-dir" | "-d" => {
-                cfg.data_dir = PathBuf::from(val);
-            }
-            "--name" | "-n" => {
-                cfg.name = val.clone();
-            }
-            "--tier" | "-t" => {
-                cfg.tier = Self::parse_tier(val)?;
-            }
+            "--data-dir" | "-d" => cfg.data_dir = PathBuf::from(val),
+            "--name" | "-n" => cfg.name = val.clone(),
+            "--tier" | "-t" => cfg.tier = Self::parse_tier(val)?,
             "--seed" | "-s" => {
                 let addr = val.parse().map_err(|e: std::net::AddrParseError| {
                     ConfigError::InvalidSeed(val.clone(), e.to_string())
                 })?;
                 cfg.seed_peers.push(addr);
             }
-            "--owner" => {
-                cfg.owner_wallet = Some(Self::parse_hex_pubkey(val)?);
-            }
+            "--owner" => cfg.owner_wallet = Some(Self::parse_hex_pubkey(val)?),
+            "--genesis" | "-g" => cfg.genesis_path = Some(PathBuf::from(val)),
             _ => return Err(ConfigError::UnknownFlag(flag.clone())),
         }
         Ok(i + 2)
@@ -155,5 +150,19 @@ impl NodeConfig {
                 .map_err(|e| ConfigError::InvalidOwnerPubkey(val.to_string(), e.to_string()))?;
         }
         Ok(key)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_genesis_flag() {
+        let args = vec!["run".into(), "--genesis".into(), "/tmp/genesis.json".into()];
+        let CliCommand::Run(cfg) = NodeConfig::parse(&args).unwrap() else {
+            panic!("expected Run");
+        };
+        assert_eq!(cfg.genesis_path, Some(PathBuf::from("/tmp/genesis.json")));
     }
 }

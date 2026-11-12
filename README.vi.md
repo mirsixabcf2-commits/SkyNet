@@ -88,8 +88,8 @@ flowchart TD
 - **Đối tượng mua:** Các Agent tài chính, bot giao dịch, hệ thống tự động cần dữ liệu thực không bịa đặt.
 - **Cách kiếm tiền:** Tế bào Da/Giác quan thu thập dữ liệu thế giới thực và tham gia biểu quyết đồng thuận lấy mẫu **Snowball** để xác thực tính trung thực. Agent nhận phí thẩm định cho mỗi lượt xác thực hợp lệ.
 
-### 4. Khai thác Tài nguyên Nhàn rỗi & Đóng góp Hạ tầng (`DePIN Staking`)
-- **Cách kiếm tiền:** Tận dụng CPU hoặc GPU rảnh rỗi để chạy các lô mô hình mô học (`TissueBatch`). Agent nhận thưởng lạm phát từ Kho Halving Genesis tương ứng với công sức tính toán và bảo vệ mạng lưới.
+### 4. Khai thác Tài nguyên Nhàn rỗi, Huấn luyện Vi mô & Đóng góp Hạ tầng (`Opportunistic Edge & DePIN Staking`)
+- **Cách kiếm tiền:** Tận dụng GPU/CPU nhàn rỗi trên PC chơi game, máy trạm CUDA hoặc Mac Apple Silicon để chạy đan xen các lát huấn luyện vi mô (`Micro-Training`, miền mã lệnh `0x13`), lô mô học (`TissueBatch`) và suy luận `< 10ms` mà không làm tụt FPS (`< 100ms` nhường máy tức thì). Agent nhận thanh toán streaming từng lát (`Chunk-Streaming Settlement`), thưởng kiểm toán `Canary Spot-Check` và phần thưởng lạm phát từ Kho Halving Genesis.
 
 ---
 
@@ -105,69 +105,96 @@ SkyNet thiết kế kiến trúc phân quyền **Soul–Body Custody** để con
 
 ---
 
-## 4. Bắt Đầu Nhanh (Quickstart Protocol)
+## 4. Mạng Lưới Cận Biên Cơ Hội & Hạ Tầng P2P Thực Chiến (`006-opportunistic-edge-network`)
 
-### Bước 1: Kiểm tra môi trường & chạy toàn bộ Unit Tests
-Đảm bảo hệ sinh thái toán học và sổ cái hoạt động hoàn hảo:
+SkyNet vận hành bộ máy tính toán cận biên cấp độ Production kết hợp điều tốc phần cứng không độ trễ, huấn luyện phân tán chịu rớt gói và thanh toán vi mô trực tiếp:
+
+- **🎮 Opportunistic Idle GPU/CPU Compute & Zero-Impact Gaming Governor:**
+  - Tự động khai thác CUDA / Metal / CPU khi máy nhàn rỗi và **nhường máy tức thì trong `< 100ms`** (trung vị `< 25ms` qua dò xung trễ lát cắt `> 1.8× EMA` kết hợp lấy mẫu cảm biến thích nghi `250ms` / `1500ms`) ngay khi bật Game AAA, rút sạc pin hoặc chạm trần VRAM (`50%`).
+  - Ghi nguyên tử trạng thái dở dang **`Micro-Checkpoint` trong `< 5ms`** (`.tmp -> rename`, không mất tiến độ huấn luyện) và chống nhấp nháy bật/tắt bằng **dải trễ nhiệt `8°C`** (ngắt ở `78°C`, chỉ nối lại khi `<= 70°C`) cùng thời gian giữ nhàn rỗi **`30 giây`**, điều phối đa hợp 3 nấc (`DeepIdle` / `LightIdle` / `Paused*`).
+- **🧬 Huấn Luyện Vi Mô Phân Tán, Tiến Hóa `PlasmidPatch` & Cắt Cọc `Canary Spot-Check` (PoUW):**
+  - Thực thi nhiều bước tối ưu autograd trên `candle-core`, nén chênh lệch trọng số **`half::f16`** (hoặc Top-K thưa) kèm mã băm chuẩn hóa lượng tử hóa đa nền tảng trên miền mã lệnh chính thức **`0x13`**.
+  - Truyền phân mảnh huấn luyện qua luồng **giọt nước mã xóa Fountain trên UDP `<= 1200B`**, khôi phục nguyên vẹn `100%` dưới mức **rớt gói `40%+`** mà không cần gói báo nhận tuần tự.
+  - Trộn ngầm **`10%` lát bẫy `Canary Spot-Check`** (`Cosine Similarity >= 0.985`): tự động cắt cọc bảo lãnh `AgentBond` và hạ điểm uy tín PoUW về `0` đối với nút gian lận/`NaN`, đồng thời tổng hợp chống đầu độc bằng **`TrimmedMeanAggregator`** (cắt tỉa `10%` hai đầu cực trị).
+- **🌐 Nghi Thức Khởi Nguyên `GENESIS_HASH` (`21T SKN`) & Đục Lỗ NAT UDP P2P:**
+  - Khởi tạo và xác thực tất định `genesis.json` cưỡng chế bất biến bảo toàn tuyệt đối **`21,000,000,000,000 SKN`** (`85%` Kho Halving + `15%` Lưu thông ban đầu, sai lệch `0 nanoSKN`).
+  - Màng lọc tế bào Da **`EpidermalFilter` `< 5µs` không cấp phát bộ nhớ động (zero-alloc)** chặn gói tin sai `GENESIS_HASH` hoặc lệch thời gian quá `±30s`; kết hợp tự khám phá LAN **`< 1s`**, bắt tay đục lỗ NAT UDP đồng thời **`PunchRendezvous` (`<= 300B`) trong `< 3s`** và kênh chuyển tiếp dự phòng **`GangliaRelay` (`<= 1200B`)** cho mạng Symmetric NAT / 4G.
+- **💸 Thanh Toán Từng Lát (`Chunk-Streaming Settlement`), Tự Động `Yield Sweep` & Trạm `60fps` Studio:**
+  - Giải ngân lũy kế `NanoSkn` ngay sau từng phân mảnh hoàn thành qua `SynapticVoucher` chịu rớt gói (cho phép Worker tất toán đơn phương nếu khách hàng mất kết nối), tự động quét phần lãi ròng vượt ngưỡng (`--auto-sweep-skn 50`, `0%` phí đốt trao đổi chất) thẳng về Ví Lạnh chủ nhân.
+  - Giao diện **`Worker Earnings & Opportunistic Studio`** đẩy dữ liệu thời gian thực **`60fps` qua WebSocket chuẩn RFC 6455** trên `skynet-dashboard`, trực quan hóa huy hiệu Governor, độ trễ nhường máy, đồng hồ GPU/VRAM/CPU/Nhiệt độ/Pin, điểm PoUW và lịch sử quét lãi.
+
+---
+
+## 5. Bắt Đầu Nhanh (Quickstart Protocol)
+
+### Bước 1: Kiểm tra môi trường & chạy toàn bộ Unit / Integration Tests
+Đảm bảo hệ sinh thái toán học, đồng thuận, điều tốc phần cứng và sổ cái hoạt động hoàn hảo:
 ```bash
 cargo test --workspace
 ```
 
 ### Bước 2: Chạy bộ nhị phân CLI Thực chiến
 
-#### A. Dành cho Người dùng & AI Dispatcher (`skynet`):
+#### A. Dành cho Người vận hành Mạng, Người dùng & AI Dispatcher (`skynet`):
 ```bash
-# Khởi tạo ví cục bộ
-cargo run --bin skynet -- wallet init
+# Khởi tạo & xác thực cấu hình khởi nguyên Genesis (bất biến 21T SKN & GENESIS_HASH)
+cargo run --bin skynet -- genesis generate --output genesis.json
+cargo run --bin skynet -- genesis verify --path genesis.json
 
-# Xem số dư on-chain
+# Khởi tạo ví cục bộ, nhận Airdrop HWID (PoPE) & kiểm tra số dư on-chain
+cargo run --bin skynet -- wallet init
+cargo run --bin skynet -- airdrop claim --wallet wallet.json
 cargo run --bin skynet -- wallet balance
 
-# Xem danh sách presets có sẵn (text-audit, csv-clean-normalize, v.v.)
+# Xem danh sách presets có sẵn & bắn task suy luận / tiền xử lý qua UDP
 cargo run --bin skynet -- compute presets
-
-# Tiền xử lý dữ liệu và bắn task tính toán
 cargo run --bin skynet -- compute dispatch --input contract.txt --preset text-audit --encrypt
+
+# Phát luồng huấn luyện vi mô phân tán (Fountain droplets <= 1200B, miền Opcode 0x13)
+cargo run --bin skynet -- compute train --input dataset.bin --epochs 4 --bounty 25 --target 127.0.0.1:8889
 ```
 
-#### B. Dành cho Thợ đào Worker (`skynet-agent`):
+#### B. Dành cho Game thủ & Thợ đào Cơ hội (`skynet-agent`):
 ```bash
-# Tự động nhận diện phần cứng máy tính và tạo hồ sơ
+# Tự động nhận diện phần cứng máy tính (CUDA / Metal / CPU) và tạo hồ sơ
 cargo run --bin skynet-agent -- --init-worker
 
-# Bắt đầu tự động đấu thầu nhận việc
+# Chế độ kiếm tiền nhàn rỗi Zero-Impact (< 100ms nhường máy khi chơi Game, tự quét lãi 50 SKN về Ví Lạnh)
+cargo run --bin skynet-agent -- --opportunistic --listen 8889 --seed 127.0.0.1:8888 --auto-sweep-skn 50 --battery-guard
+
+# Hoặc chạy chế độ đấu thầu cổ điển theo nhãn năng lực
 cargo run --bin skynet-agent -- --listen 8889 --auto-bid --tags "cpu,ai,etl" --battery-guard
 ```
 
-### Bước 3: Khởi chạy Node Daemon Chạy Nền Bền Vững (`skynet-node`)
+### Bước 3: Khởi chạy Node Daemon & Điểm Hẹn P2P (`skynet-node`)
 ```bash
-cargo run --bin skynet-node -- run --port 8888 --data-dir ~/.skynet/data
+cargo run --bin skynet-node -- run --port 8888 --genesis genesis.json --data-dir ~/.skynet/data
 ```
 
-### Bước 4: Khởi chạy Dashboard Giám Sát & Studio Tiền Xử Lý (Port 8888)
+### Bước 4: Khởi chạy Trạm Giám Sát 60fps & Worker Earnings Studio (Port 8888)
 ```bash
 cargo run -p skynet-dashboard
-# Mở trình duyệt tại: http://127.0.0.1:8888
+# Mở trình duyệt tại: http://127.0.0.1:8888 (WebSocket RFC 6455 60fps + Opportunistic Studio)
 ```
 
 ---
 
-## 5. Cấu Trúc 8 Crates Trong Workspace
+## 6. Cấu Trúc 8 Crates Trong Workspace
 
 | Crate | Đường dẫn | Chức năng trong Cỗ máy Kiếm tiền |
 |---|---|---|
-| **`skynet-dna`** | [`crates/skynet-dna`](crates/skynet-dna) | Lưu trữ mã di truyền AI (`CellDna`), công tắc thượng di truyền, nhân đôi và lai ghép gen bán trên Plasmid Market. |
-| **`skynet-cell`** | [`crates/skynet-cell`](crates/skynet-cell) | Động cơ mạng nơ-ron trạng thái lỏng siêu nhẹ (`candle-core`), thực thi lô `TissueBatch` trên CPU/GPU Metal/CUDA. |
-| **`skynet-ledger`** | [`crates/skynet-ledger`](crates/skynet-ledger) | Đơn vị tiền tệ `NanoSkn(u128)`, kho Halving 21 nghìn tỉ SKN, sổ cái UTXO-DAG và chính sách lưu ký Soul-Body. |
-| **`skynet-wire`** | [`crates/skynet-wire`](crates/skynet-wire) | Giao thức truyền tin UDP `<= 1200B`, chữ ký Ed25519, bộ nhớ định tuyến `SynapticPeerTable` và mã xóa sửa lỗi Fountain. |
-| **`skynet-agent`** | [`crates/skynet-agent`](crates/skynet-agent) | Node cơ thể hoàn chỉnh `AgentNode`, tích hợp socket UDP bất đồng bộ và bộ máy đồng thuận `Snowball`. |
-| **`skynet-node`** | [`crates/skynet-node`](crates/skynet-node) | Daemon bền vững, cơ chế ghi đĩa nguyên tử (.tmp -> rename), động cơ tiền xử lý (PII, CSV, E.164, Encrypt) và bộ CLI `skynet` / `skynet-agent`. |
-| **`skynet-sim`** | [`crates/skynet-sim`](crates/skynet-sim) | Môi trường mô phỏng thực tế đa Agent tương tác, kiếm tiền và trao đổi năng lượng dưới điều kiện mạng khắc nghiệt. |
-| **`skynet-dashboard`** | [`crates/skynet-dashboard`](crates/skynet-dashboard) | Trạm chỉ huy trực quan hóa thời gian thực (WebSocket 60fps) và Studio tiền xử lý dữ liệu thô. |
+| **`skynet-dna`** | [`crates/skynet-dna`](crates/skynet-dna) | Lưu trữ mã di truyền AI (`CellDna`), công tắc thượng di truyền, bản vá tiến hóa có hướng `PlasmidPatch` và lai ghép gen bán trên Plasmid Market. |
+| **`skynet-cell`** | [`crates/skynet-cell`](crates/skynet-cell) | Động cơ nơ-ron `candle-core` (`TissueBatch` & autograd `Micro-Training`), nén gradient `half::f16`, chốt ngắt `< 100ms` (`PreemptGuard`), kiểm định `Canary Spot-Check` và `TrimmedMeanAggregator`. |
+| **`skynet-ledger`** | [`crates/skynet-ledger`](crates/skynet-ledger) | Tiền tệ `NanoSkn(u128)`, khởi nguyên `GenesisConfig` (`21T SKN`), sổ cái UTXO-DAG, thanh toán từng lát `StreamingEscrow`, phạt cắt cọc và tự động `Yield Sweep` theo lưu ký Soul-Body. |
+| **`skynet-wire`** | [`crates/skynet-wire`](crates/skynet-wire) | Khung tin UDP `<= 1200B`, màng lọc Da `< 5µs` (`EpidermalFilter`), đục lỗ NAT `PunchRendezvous` / `GangliaRelay`, miền Opcode `0x13` và giọt nước mã xóa Fountain. |
+| **`skynet-agent`** | [`crates/skynet-agent`](crates/skynet-agent) | Thực thể `AgentNode`, đồng thuận `Snowball`, điều phối điểm hẹn `RendezvousBroker`, bộ điều tốc `GovernorFsm`, đa hợp 3 nấc `WorkloadMultiplexer` và `OpportunisticWorker`. |
+| **`skynet-node`** | [`crates/skynet-node`](crates/skynet-node) | Daemon P2P bền vững, ghi đĩa nguyên tử (`Micro-Checkpoint` `< 5ms`), giám sát cảm biến OS/GPU đa nền tảng, động cơ tiền xử lý và bộ CLI `skynet` / `skynet-agent`. |
+| **`skynet-sim`** | [`crates/skynet-sim`](crates/skynet-sim) | Mô phỏng hỗn loạn đa Agent kiểm chứng khôi phục Fountain dưới rớt gói `40%+`, nhường máy `< 100ms`, cắt cọc nút Byzantine và bảo toàn tuyệt đối `21T SKN`. |
+| **`skynet-dashboard`** | [`crates/skynet-dashboard`](crates/skynet-dashboard) | Trạm chỉ huy trực quan hóa thời gian thực qua WebSocket RFC 6455 `60fps`, `Worker Earnings & Opportunistic Studio` và Studio tiền xử lý dữ liệu thô. |
 
 ---
 
-## 6. Sách Trắng & Tài Liệu Kỹ Thuật Đa Ngôn Ngữ
+## 7. Sách Trắng & Tài Liệu Kỹ Thuật Đa Ngôn Ngữ
 
 Hệ thống cung cấp sách trắng đầy đủ bằng **16 ngôn ngữ**:
 - **Cổng Tài Liệu Kỹ Thuật Tổng Hợp:** [`docs/README.md`](docs/README.md)
@@ -187,6 +214,6 @@ Hệ thống cung cấp sách trắng đầy đủ bằng **16 ngôn ngữ**:
 
 ---
 
-## 7. Giấy phép (License)
+## 8. Giấy phép (License)
 
 Dự án phát hành dưới giấy phép kép: **MIT** hoặc **Apache-2.0**. Mọi AI Agent và con người đều có toàn quyền fork, nhúng, tích hợp và triển khai thương mại tự do.

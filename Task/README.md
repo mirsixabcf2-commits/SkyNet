@@ -46,3 +46,5 @@ Mỗi file task phải tuân thủ cấu trúc định dạng sau:
 | Thời Điểm (Timestamp) | Tên File Task | Chủ Đề / Mục Tiêu | Trạng Thái |
 | :--- | :--- | :--- | :---: |
 | `2026-11-04 18:25:00` | [`2026-11-04_182500_security_hardening.md`](file:///Users/pain/DATA/Projects/SkyNet/Task/2026-11-04_182500_security_hardening.md) | Khắc phục 11 rủi ro bảo mật & chống gian lận hệ thống | **Đã Hoàn Thành** |
+| `2026-11-06 09:15:00` | [`2026-11-06_091500_genesis_and_p2p_rendezvous.md`](file:///Users/pain/DATA/Projects/SkyNet/Task/2026-11-06_091500_genesis_and_p2p_rendezvous.md) | Nghi thức khởi nguyên Genesis & Đục lỗ NAT UDP P2P Rendezvous | **Đã Hoàn Thành** |
+| `2026-11-12 09:08:54` | [`2026-11-12_opportunistic_edge_network.md`](file:///Users/pain/DATA/Projects/SkyNet/Task/2026-11-12_opportunistic_edge_network.md) | Mạng lưới AI cận biên cơ hội, huấn luyện vi mô phân tán, cắt cọc PoUW Canary & Studio 60fps | **Đã Hoàn Thành** |

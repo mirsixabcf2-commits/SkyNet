@@ -31,6 +31,9 @@ fn print_banner(cfg: &NodeConfig) {
     println!("  Tier      : {:?}", cfg.tier);
     println!("  Data Dir  : {}", cfg.data_dir.display());
     println!("  UDP Port  : {}", cfg.port);
+    if let Some(genesis) = &cfg.genesis_path {
+        println!("  Genesis   : {}", genesis.display());
+    }
     println!("--------------------------------------------------------------------------\n");
 }
 
@@ -49,19 +52,23 @@ fn print_help() {
     println!("  --tier, -t <tier>      Hardware tier: TINY, STANDARD, COLOSSAL");
     println!("  --seed, -s <ip:port>   Bootstrap peer address (repeatable)");
     println!("  --owner <hex>          Owner HumanWallet public key (32 bytes hex)");
+    println!("  --genesis, -g <path>   Path to canonical genesis.json file");
 }
 
 fn print_node_status(data_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let storage = StorageEngine::new(data_dir)?;
     if !storage.has_existing_state() {
         println!("  [!] No existing SkyNet state found at {}", data_dir.display());
-        println!("      Run `skynet-node run --data-dir {}` to initialize this node.", data_dir.display());
+        println!(
+            "      Run `skynet-node run --data-dir {}` to initialize this node.",
+            data_dir.display()
+        );
         return Ok(());
     }
 
-    let meta = storage.load_metadata()?.unwrap();
-    let org = storage.load_organism()?.unwrap();
-    let ledger = storage.load_ledger()?.unwrap();
+    let meta = storage.load_metadata()?.ok_or("missing persisted node metadata")?;
+    let org = storage.load_organism()?.ok_or("missing persisted organism state")?;
+    let ledger = storage.load_ledger()?.ok_or("missing persisted ledger state")?;
     let peers = storage.load_peers()?;
 
     let mut role_counts: HashMap<CellRole, usize> = HashMap::new();
@@ -72,7 +79,8 @@ fn print_node_status(data_dir: &Path) -> Result<(), Box<dyn std::error::Error>> 
     println!("==========================================================================");
     println!("  SKYNET NODE LOCAL INSPECTION: {}", meta.name);
     println!("==========================================================================");
-    println!("  Identity (Pubkey) : {}", meta.pubkey.iter().map(|b| format!("{:02x}", b)).collect::<String>());
+    let pk_hex: String = meta.pubkey.iter().map(|b| format!("{b:02x}")).collect();
+    println!("  Identity (Pubkey) : {pk_hex}");
     println!("  Hardware Tier     : {:?}", meta.tier);
     println!("  Epoch / Pulse Seq : {} / {}", meta.epoch, meta.pulse_seq);
     println!("  On-Chain Balance  : {}", ledger.balance_of(&meta.pubkey));

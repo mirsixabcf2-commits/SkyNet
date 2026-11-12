@@ -1,5 +1,5 @@
 //! `compute_escrow`: Two-sided economic bounty escrow (`NanoSkn`), auditor quorum splitting,
-//! and collateral slashing for verifiable remote compute tasks on the SkyNet ledger.
+//! and verifiable remote compute task locking/completion on the SkyNet ledger.
 
 use std::collections::HashMap;
 
@@ -8,19 +8,21 @@ use crate::compute_escrow_types::{
     AuditorDeposit, ComputeEscrowRecord, EscrowError, EscrowPayoutBreakdown, EscrowSplitConfig,
     EscrowStatus, LockTaskParams, TaskId,
 };
+use crate::escrow_slash::WorkerReputation;
+use crate::streaming_escrow::ChunkEscrowSchedule;
 use crate::NanoSkn;
 
-/// Dual-staking compute escrow vault managing active tasks and settlements.
+/// Dual-staking compute escrow vault managing active tasks, PoUW reputation, and chunk schedules.
 #[derive(Debug, Default)]
 pub struct ComputeEscrowVault {
-    records: HashMap<TaskId, ComputeEscrowRecord>,
+    pub(crate) records: HashMap<TaskId, ComputeEscrowRecord>,
+    pub(crate) reputations: HashMap<[u8; 32], WorkerReputation>,
+    pub(crate) chunk_schedules: HashMap<TaskId, ChunkEscrowSchedule>,
 }
 
 impl ComputeEscrowVault {
     pub fn new() -> Self {
-        Self {
-            records: HashMap::new(),
-        }
+        Self::default()
     }
 
     /// Locks bounty and worker bond into escrow using a structured request.
@@ -29,28 +31,20 @@ impl ComputeEscrowVault {
             return Err(EscrowError::AlreadyExists);
         }
         let (bounty, bond, auditor_pool, required_auditors) = match params.split {
-            Some(split) => (
-                split.worker_bounty,
-                params.bond,
-                split.auditor_pool_bounty,
-                split.required_auditors,
-            ),
+            Some(s) => (s.worker_bounty, params.bond, s.auditor_pool_bounty, s.required_auditors),
             None => (params.bounty, params.bond, NanoSkn::ZERO, 0),
         };
-        let record = ComputeEscrowRecord {
-            task_id: params.task_id,
-            status: EscrowStatus::Locked {
-                client_pubkey: params.client_pubkey,
-                worker_pubkey: params.worker_pubkey,
-                bounty,
-                bond,
-                timeout_epoch: params.timeout_epoch,
-                auditor_pool,
-                auditors: Vec::new(),
-                required_auditors,
-            },
+        let status = EscrowStatus::Locked {
+            client_pubkey: params.client_pubkey,
+            worker_pubkey: params.worker_pubkey,
+            bounty,
+            bond,
+            timeout_epoch: params.timeout_epoch,
+            auditor_pool,
+            auditors: Vec::new(),
+            required_auditors,
         };
-        self.records.insert(params.task_id, record);
+        self.records.insert(params.task_id, ComputeEscrowRecord { task_id: params.task_id, status });
         Ok(())
     }
 
@@ -97,37 +91,18 @@ impl ComputeEscrowVault {
     }
 
     /// Registers a community auditor staking bond to participate in verification.
-    pub fn register_auditor(
-        &mut self,
-        task_id: TaskId,
-        auditor_pubkey: [u8; 32],
-        bond: NanoSkn,
-    ) -> Result<(), EscrowError> {
-        let record = self
-            .records
-            .get_mut(&task_id)
-            .ok_or(EscrowError::NotFound)?;
-        let EscrowStatus::Locked {
-            worker_pubkey,
-            client_pubkey,
-            auditors,
-            ..
-        } = &mut record.status
-        else {
+    pub fn register_auditor(&mut self, task_id: TaskId, auditor_pubkey: [u8; 32], bond: NanoSkn) -> Result<(), EscrowError> {
+        let record = self.records.get_mut(&task_id).ok_or(EscrowError::NotFound)?;
+        let EscrowStatus::Locked { worker_pubkey, client_pubkey, auditors, .. } = &mut record.status else {
             return Err(EscrowError::NotInLockedState);
         };
-
         if &auditor_pubkey == worker_pubkey || &auditor_pubkey == client_pubkey {
             return Err(EscrowError::SelfAuditingForbidden);
         }
         if auditors.iter().any(|a| a.auditor_pubkey == auditor_pubkey) {
             return Err(EscrowError::AuditorAlreadyRegistered);
         }
-
-        auditors.push(AuditorDeposit {
-            auditor_pubkey,
-            bond,
-        });
+        auditors.push(AuditorDeposit { auditor_pubkey, bond });
         Ok(())
     }
 
@@ -139,37 +114,19 @@ impl ComputeEscrowVault {
         result_digest: [u8; 32],
         current_epoch: u64,
     ) -> Result<NanoSkn, EscrowError> {
-        let record = self
-            .records
-            .get_mut(&task_id)
-            .ok_or(EscrowError::NotFound)?;
-        let EscrowStatus::Locked {
-            worker_pubkey,
-            bounty,
-            bond,
-            timeout_epoch,
-            ..
-        } = record.status
-        else {
+        let prior = self.chunk_schedules.get(&task_id).map(|s| s.cumulative_released).unwrap_or(NanoSkn::ZERO);
+        let record = self.records.get_mut(&task_id).ok_or(EscrowError::NotFound)?;
+        let EscrowStatus::Locked { worker_pubkey, bounty, bond, timeout_epoch, .. } = record.status else {
             return Err(EscrowError::NotInLockedState);
         };
-
         if worker != &worker_pubkey {
             return Err(EscrowError::UnauthorizedWorker);
         }
         if current_epoch > timeout_epoch {
-            return Err(EscrowError::TaskExpired {
-                current: current_epoch,
-                timeout: timeout_epoch,
-            });
+            return Err(EscrowError::TaskExpired { current: current_epoch, timeout: timeout_epoch });
         }
-
-        let total_payout = bounty.checked_add(bond)?;
-        record.status = EscrowStatus::Completed {
-            worker_pubkey,
-            payout: total_payout,
-            result_digest,
-        };
+        let total_payout = bounty.checked_add(prior)?.checked_add(bond)?;
+        record.status = EscrowStatus::Completed { worker_pubkey, payout: total_payout, result_digest };
         Ok(total_payout)
     }
 
@@ -182,143 +139,28 @@ impl ComputeEscrowVault {
         result_digest: [u8; 32],
         current_epoch: u64,
     ) -> Result<EscrowPayoutBreakdown, EscrowError> {
-        let record = self
-            .records
-            .get_mut(&task_id)
-            .ok_or(EscrowError::NotFound)?;
-        let EscrowStatus::Locked {
-            worker_pubkey,
-            bounty,
-            bond,
-            timeout_epoch,
-            auditor_pool,
-            ref auditors,
-            required_auditors,
-            ..
-        } = record.status
+        let prior = self.chunk_schedules.get(&task_id).map(|s| s.cumulative_released).unwrap_or(NanoSkn::ZERO);
+        let record = self.records.get_mut(&task_id).ok_or(EscrowError::NotFound)?;
+        let EscrowStatus::Locked { worker_pubkey, bounty, bond, timeout_epoch, auditor_pool, ref auditors, required_auditors, .. } =
+            record.status
         else {
             return Err(EscrowError::NotInLockedState);
         };
-
         if worker != &worker_pubkey {
             return Err(EscrowError::UnauthorizedWorker);
         }
         if current_epoch > timeout_epoch {
-            return Err(EscrowError::TaskExpired {
-                current: current_epoch,
-                timeout: timeout_epoch,
-            });
+            return Err(EscrowError::TaskExpired { current: current_epoch, timeout: timeout_epoch });
         }
         if attesting_auditors.len() < required_auditors as usize {
-            return Err(EscrowError::InsufficientAuditors {
-                actual: attesting_auditors.len(),
-                required: required_auditors as usize,
-            });
+            return Err(EscrowError::InsufficientAuditors { actual: attesting_auditors.len(), required: required_auditors as usize });
         }
-
-        let breakdown = calculate_audited_payout(
-            bounty,
-            bond,
-            auditor_pool,
-            auditors,
-            attesting_auditors,
-        )?;
-
-        record.status = EscrowStatus::CompletedWithAuditors {
-            worker_pubkey,
-            breakdown: breakdown.clone(),
-            result_digest,
-        };
+        let breakdown = calculate_audited_payout(bounty.checked_add(prior)?, bond, auditor_pool, auditors, attesting_auditors)?;
+        record.status = EscrowStatus::CompletedWithAuditors { worker_pubkey, breakdown: breakdown.clone(), result_digest };
         Ok(breakdown)
-    }
-
-    /// Refunds client upon worker timeout and slashes worker collateral (auditors refunded in full).
-    pub fn refund_task(
-        &mut self,
-        task_id: TaskId,
-        client: &[u8; 32],
-        current_epoch: u64,
-    ) -> Result<(NanoSkn, NanoSkn), EscrowError> {
-        let record = self
-            .records
-            .get_mut(&task_id)
-            .ok_or(EscrowError::NotFound)?;
-        let EscrowStatus::Locked {
-            client_pubkey,
-            bounty,
-            bond,
-            timeout_epoch,
-            auditor_pool,
-            ref auditors,
-            ..
-        } = record.status
-        else {
-            return Err(EscrowError::NotInLockedState);
-        };
-
-        if client != &client_pubkey {
-            return Err(EscrowError::UnauthorizedClient);
-        }
-        if current_epoch <= timeout_epoch {
-            return Err(EscrowError::NotExpired {
-                current: current_epoch,
-                timeout: timeout_epoch,
-            });
-        }
-
-        let compensation = NanoSkn(bond.0 / 2);
-        let slashed_burn = bond.checked_sub(compensation)?;
-        let total_refund = bounty.checked_add(auditor_pool)?.checked_add(compensation)?;
-
-        let auditor_refunds = auditors
-            .iter()
-            .map(|a| (a.auditor_pubkey, a.bond))
-            .collect();
-
-        record.status = EscrowStatus::Refunded {
-            client_pubkey,
-            refund: total_refund,
-            slashed_burn,
-            auditor_refunds,
-        };
-        Ok((total_refund, slashed_burn))
     }
 
     pub fn get_record(&self, task_id: &TaskId) -> Option<&ComputeEscrowRecord> {
         self.records.get(task_id)
-    }
-
-    /// Verifies exact monetary conservation: locked inputs == disbursed payouts / refunds.
-    pub fn total_accounted_vault_balance(&self, task_id: &TaskId) -> Result<NanoSkn, EscrowError> {
-        let record = self.records.get(task_id).ok_or(EscrowError::NotFound)?;
-        match &record.status {
-            EscrowStatus::Locked {
-                bounty,
-                bond,
-                auditor_pool,
-                auditors,
-                ..
-            } => {
-                let mut sum = bounty.checked_add(*bond)?.checked_add(*auditor_pool)?;
-                for a in auditors {
-                    sum = sum.checked_add(a.bond)?;
-                }
-                Ok(sum)
-            }
-            EscrowStatus::Completed { payout, .. } => Ok(*payout),
-            EscrowStatus::CompletedWithAuditors { breakdown, .. } => Ok(breakdown.total_disbursed),
-            EscrowStatus::Refunded {
-                refund,
-                slashed_burn,
-                auditor_refunds,
-                ..
-            } => {
-                let mut sum = refund.checked_add(*slashed_burn)?;
-                for (_, b) in auditor_refunds {
-                    sum = sum.checked_add(*b)?;
-                }
-                Ok(sum)
-            }
-        }
     }
 }

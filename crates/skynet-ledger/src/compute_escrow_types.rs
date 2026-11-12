@@ -33,6 +33,21 @@ pub enum EscrowError {
     NotExpired { current: u64, timeout: u64 },
     #[error("task has expired and cannot be completed (current: {current}, timeout: {timeout})")]
     TaskExpired { current: u64, timeout: u64 },
+    #[error("invalid PoUW fraud proof claim")]
+    InvalidFraudProof,
+    #[error("chunk escrow schedule already registered for task")]
+    ChunkScheduleAlreadyExists,
+    #[error("chunk escrow schedule not found for task")]
+    ChunkScheduleNotFound,
+    #[error("invalid chunk schedule configuration")]
+    InvalidChunkSchedule,
+    #[error("invalid or out-of-order chunk milestone {chunk_idx} of {total_chunks}")]
+    InvalidChunkMilestone { chunk_idx: u16, total_chunks: u16 },
+    #[error("voucher amount ({voucher_amount}) exceeds task bounty ({total_bounty})")]
+    VoucherExceedsTaskBounty {
+        voucher_amount: u128,
+        total_bounty: u128,
+    },
     #[error("ledger arithmetic error: {0}")]
     Ledger(#[from] LedgerError),
 }
@@ -100,6 +115,16 @@ pub enum EscrowStatus {
         refund: NanoSkn,
         slashed_burn: NanoSkn,
         auditor_refunds: Vec<([u8; 32], NanoSkn)>,
+    },
+    Slashed {
+        client_pubkey: [u8; 32],
+        faulty_worker: [u8; 32],
+        challenger_auditor: [u8; 32],
+        client_refund: NanoSkn,
+        auditor_reward: NanoSkn,
+        prior_chunk_payouts: NanoSkn,
+        auditor_refunds: Vec<([u8; 32], NanoSkn)>,
+        evidence_digest: [u8; 32],
     },
 }
 

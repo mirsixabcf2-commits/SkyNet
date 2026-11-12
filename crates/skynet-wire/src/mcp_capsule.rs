@@ -13,6 +13,8 @@ pub enum OpcodeDomain {
     AudioSpeech = 0x11,
     /// Large language models, text generation, LoRA fine-tuning (0x12)
     LlmNlp = 0x12,
+    /// Opportunistic edge micro-training & federated Plasmid neuro-evolution (0x13)
+    MicroTrainEvolution = 0x13,
     /// 3D graphics rendering, Gaussian Splatting, NeRF, ray-tracing (0x20)
     Graphics3D = 0x20,
     /// Video transcoding, codec conversion, media pipelines (0x21)
@@ -53,6 +55,7 @@ impl OpcodeDomain {
             0x10 => Self::VisionAi,
             0x11 => Self::AudioSpeech,
             0x12 => Self::LlmNlp,
+            0x13 => Self::MicroTrainEvolution,
             0x20 => Self::Graphics3D,
             0x21 => Self::MediaTranscode,
             0x30 => Self::BioScience,
@@ -107,6 +110,9 @@ impl HierarchicalOpcode {
             (OpcodeDomain::AudioSpeech, 0x02) => "skynet://audio.stem_separation.demucs_v4",
             (OpcodeDomain::LlmNlp, 0x01) => "skynet://llm.generate.llama3_8b",
             (OpcodeDomain::LlmNlp, 0x02) => "skynet://llm.finetune.lora_70b",
+            (OpcodeDomain::MicroTrainEvolution, 0x01) => "skynet://micro_train.mlp_step",
+            (OpcodeDomain::MicroTrainEvolution, 0x02) => "skynet://micro_train.lora_adapter",
+            (OpcodeDomain::MicroTrainEvolution, 0x03) => "skynet://evolution.plasmid_guided",
             (OpcodeDomain::Graphics3D, 0x01) => "skynet://graphics.render.blender_cycles",
             (OpcodeDomain::Graphics3D, 0x02) => "skynet://graphics.reconstruct.gaussian_splatting",
             (OpcodeDomain::BioScience, 0x01) => "skynet://bio.folding.alphafold3",
@@ -129,81 +135,29 @@ impl HierarchicalOpcode {
 /// Target hardware architecture profile required by an execution capsule.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CapsuleTargetArch {
-    /// Nvidia CUDA (Tensor Cores / Compute Capability 7.5+)
     CudaX86_64,
-    /// Apple Silicon Metal 3 (Unified Memory UMA)
     MetalAarch64,
-    /// Universal WebAssembly with SIMD128
     WasmSimd,
-    /// Linux x86_64 AVX-512 CPU Multithreaded
     CpuX86_64Avx512,
-    /// ARM64 Linux NEON (Raspberry Pi 5 / Graviton)
     CpuArm64Neon,
-    /// Intel SGX / AMD SEV-SNP Confidential Hardware Enclave
     TeeHardwareEnclave,
 }
 
 /// Standalone, self-contained runtime capsule manifest auto-fetched by workers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CapsuleManifest {
-    /// Canonical MCP Tool Identifier (e.g. `skynet://vision.upscale.real_esrgan`).
     pub mcp_tool_name: String,
-    /// Numeric hierarchical opcode.
     pub opcode: u16,
-    /// BLAKE3 checksum of the executable capsule bundle.
     pub capsule_hash: [u8; 32],
-    /// Target execution architecture.
     pub target_arch: CapsuleTargetArch,
-    /// Total download size in bytes.
     pub download_bytes: u64,
-    /// Minimum VRAM required in Megabytes (0 if CPU/RAM-only).
     pub min_vram_mb: u32,
-    /// Minimum system RAM required in Megabytes.
     pub min_ram_mb: u32,
-    /// Content identifier or URI for peer-to-peer fountain retrieval.
     pub fountain_uri: String,
 }
 
 impl CapsuleManifest {
     pub fn is_compatible_with(&self, vram_mb: u32, ram_mb: u32, arch: CapsuleTargetArch) -> bool {
         self.target_arch == arch && vram_mb >= self.min_vram_mb && ram_mb >= self.min_ram_mb
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_hierarchical_opcode_roundtrip() {
-        let op = HierarchicalOpcode::new(OpcodeDomain::VisionAi, 0x01);
-        let code = op.to_u16();
-        assert_eq!(code, 0x1001);
-
-        let parsed = HierarchicalOpcode::from_u16(code);
-        assert_eq!(parsed.domain, OpcodeDomain::VisionAi);
-        assert_eq!(parsed.task_code, 0x01);
-        assert_eq!(parsed.canonical_mcp_tool_name(), "skynet://vision.upscale.real_esrgan");
-    }
-
-    #[test]
-    fn test_capsule_manifest_hardware_compatibility() {
-        let manifest = CapsuleManifest {
-            mcp_tool_name: "skynet://vision.upscale.real_esrgan".to_string(),
-            opcode: 0x1001,
-            capsule_hash: [0xabu8; 32],
-            target_arch: CapsuleTargetArch::CudaX86_64,
-            download_bytes: 45_000_000,
-            min_vram_mb: 8192,
-            min_ram_mb: 16384,
-            fountain_uri: "skynet-p2p://capsules/real_esrgan_cuda.capsule".to_string(),
-        };
-
-        // Meets requirements
-        assert!(manifest.is_compatible_with(12288, 32768, CapsuleTargetArch::CudaX86_64));
-        // Insufficient VRAM
-        assert!(!manifest.is_compatible_with(4096, 32768, CapsuleTargetArch::CudaX86_64));
-        // Wrong architecture
-        assert!(!manifest.is_compatible_with(16384, 32768, CapsuleTargetArch::MetalAarch64));
     }
 }

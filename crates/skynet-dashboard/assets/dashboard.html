@@ -243,6 +243,79 @@
     </div>
   </div>
 
+  <!-- Worker Earnings & Opportunistic Studio (Feature 006 — 60fps WebSocket) -->
+  <div id="workerStudioPanel" class="bg-[var(--card)] border border-emerald-500/35 rounded-xl p-4 shadow-sm flex flex-col space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-base">⚡</span>
+          <h2 class="text-sm font-semibold text-emerald-400">Worker Earnings &amp; Opportunistic Studio</h2>
+          <span id="wsStreamBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-mono border border-emerald-500/40 bg-emerald-500/15 text-emerald-300">● 60FPS WEBSOCKET RFC 6455</span>
+          <span id="wsFpsCounter" class="text-[11px] font-mono text-[var(--muted-foreground)]">60 fps</span>
+        </div>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Nhường máy cho Game thủ &lt; 100ms SLA • Bẫy kiểm định Canary PoUW • Tự động Quét Lãi 0% burn về Ví Lạnh</p>
+      </div>
+      <div class="flex items-center gap-2.5 text-xs">
+        <span class="text-[var(--muted-foreground)]">Governor:</span>
+        <span id="wsGovernorBadge" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold border bg-emerald-500/20 text-emerald-300 border-emerald-500/40">DeepIdle</span>
+        <div class="px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--background)] font-mono">
+          Trễ ngắt: <span id="wsPreemptLatency" class="font-bold text-sky-400">4.20 ms</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hardware Gauges & PoUW / Fountain KPIs -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
+      <div class="lg:col-span-6 bg-[var(--background)] border border-[var(--border)] rounded-lg p-3 space-y-2">
+        <div class="flex items-center justify-between font-medium">
+          <span>Cảm biến Phần cứng Không Quyền Root</span>
+          <span id="wsBatteryBadge" class="font-mono text-emerald-300">⚡ Nguồn Sạc AC</span>
+        </div>
+        <div><div class="flex justify-between mb-0.5"><span>Tải GPU</span><span id="wsGpuPct" class="font-mono">14%</span></div><div class="w-full h-1.5 rounded bg-[var(--secondary)] overflow-hidden"><div id="wsGpuBar" class="h-full bg-sky-400 transition-all duration-150" style="width:14%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span>Bộ nhớ VRAM (Trần 50%)</span><span id="wsVramPct" class="font-mono">24%</span></div><div class="w-full h-1.5 rounded bg-[var(--secondary)] overflow-hidden"><div id="wsVramBar" class="h-full bg-violet-400 transition-all duration-150" style="width:24%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span>Tải CPU</span><span id="wsCpuPct" class="font-mono">9%</span></div><div class="w-full h-1.5 rounded bg-[var(--secondary)] overflow-hidden"><div id="wsCpuBar" class="h-full bg-emerald-400 transition-all duration-150" style="width:9%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span>Nhiệt độ (Cắt 78°C / Hồi 70°C)</span><span id="wsTempC" class="font-mono">48°C</span></div><div class="w-full h-1.5 rounded bg-[var(--secondary)] overflow-hidden"><div id="wsTempBar" class="h-full bg-amber-400 transition-all duration-150" style="width:48%"></div></div></div>
+      </div>
+
+      <div class="lg:col-span-6 grid grid-cols-2 gap-2.5">
+        <div class="bg-[var(--background)] border border-[var(--border)] rounded-lg p-3">
+          <div class="text-[var(--muted-foreground)]">Tốc độ Thu nhập Live</div>
+          <div id="wsEarningRate" class="text-base font-bold font-mono text-emerald-400 mt-0.5">14.50 SKN/giờ</div>
+          <div class="text-[11px] text-[var(--muted-foreground)] mt-1">Tích lũy: <span id="wsEarnedSkn" class="font-mono text-[var(--foreground)]">0.000 SKN</span></div>
+        </div>
+        <div class="bg-[var(--background)] border border-[var(--border)] rounded-lg p-3">
+          <div class="text-[var(--muted-foreground)]">Đã Quét Về Ví Lạnh (0% burn)</div>
+          <div id="wsSweptColdSkn" class="text-base font-bold font-mono text-amber-400 mt-0.5">0.000 SKN</div>
+          <div class="text-[11px] text-[var(--muted-foreground)] mt-1">Ngưỡng tự động: <span class="font-mono">50 SKN</span></div>
+        </div>
+        <div class="bg-[var(--background)] border border-[var(--border)] rounded-lg p-3">
+          <div class="text-[var(--muted-foreground)]">Phân mảnh Fountain Đã Xong</div>
+          <div class="text-base font-bold font-mono text-sky-400 mt-0.5"><span id="wsFountainShards">1</span> shards</div>
+          <div class="text-[11px] text-[var(--muted-foreground)] mt-1">&le;1200B UDP • Chịu mất gói 40%</div>
+        </div>
+        <div class="bg-[var(--background)] border border-[var(--border)] rounded-lg p-3">
+          <div class="text-[var(--muted-foreground)]">Uy tín PoUW Canary</div>
+          <div class="text-base font-bold font-mono text-violet-400 mt-0.5"><span id="wsPouwScore">5000 bps</span></div>
+          <div class="text-[11px] text-[var(--muted-foreground)] mt-1">Bị cắt cọc: <span id="wsSlashedCount" class="font-mono text-rose-400 font-semibold">0</span> lần</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Studio Controls & Cold-Wallet Yield Sweep Log -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start text-xs pt-1">
+      <div class="lg:col-span-7 flex flex-wrap items-center gap-2">
+        <button id="btnSimGameLaunch" onclick="triggerStudioAction('sim_game_launch')" class="px-3 py-1.5 rounded-lg font-medium bg-sky-600 hover:bg-sky-500 text-white transition">🎮 Giả lập Bật Game AAA</button>
+        <button id="btnSimThermalSpike" onclick="triggerStudioAction('sim_thermal_spike')" class="px-3 py-1.5 rounded-lg font-medium bg-amber-600 hover:bg-amber-500 text-white transition">🌡️ Giả lập Nhiệt Tăng Đột Biến</button>
+        <button id="btnSimCanaryFraud" onclick="triggerStudioAction('sim_canary_fraud')" class="px-3 py-1.5 rounded-lg font-medium bg-rose-600 hover:bg-rose-500 text-white transition">🪤 Bơm Worker Gian Lận Canary</button>
+        <button id="btnSimYieldSweep" onclick="triggerStudioAction('sim_yield_sweep')" class="px-3 py-1.5 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition">❄️ Kích hoạt Quét Lãi Ví Lạnh</button>
+      </div>
+      <div class="lg:col-span-5 bg-[var(--background)] border border-[var(--border)] rounded-lg p-2.5">
+        <div class="font-semibold text-amber-300 mb-1">Nhật ký Yield Sweep về Ví Lạnh (Soul–Body Custody)</div>
+        <div id="wsSweepLog" class="max-h-20 overflow-y-auto font-mono text-[11px] space-y-0.5"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Turnkey Preprocessing Studio & Presets Console (Feature 004) -->
   <div class="bg-[var(--card)] border border-sky-500/30 rounded-xl p-4 shadow-sm flex flex-col space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
@@ -525,6 +598,7 @@
     }
 
     async function pollTelemetry() {
+      if (window.__skynetWsActive) return;
       try {
         const res = await fetch(`${API_BASE}/api/state`, { cache: 'no-store' });
         if (res.ok) {
@@ -901,9 +975,11 @@
     // Initialize Studio with default sample
     syncStudioPreset('text-audit');
 
+    window.applyState = applyState;
     pollTelemetry();
     setInterval(pollTelemetry, 450);
     requestAnimationFrame(renderCanvasFrame);
   </script>
+  <script src="/assets/worker_studio.js"></script>
 </body>
 </html>
